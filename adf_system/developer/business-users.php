@@ -177,7 +177,7 @@ if ($action === 'edit' && $editId && $businessPdo) {
 $businessUsers = [];
 if ($businessPdo) {
     try {
-        $businessUsers = $businessPdo->query("SELECT * FROM users ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
+        $businessUsers = $businessPdo->query("SELECT * FROM users WHERE is_active = 1 ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {}
 }
 
