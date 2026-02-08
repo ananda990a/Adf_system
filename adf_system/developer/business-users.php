@@ -146,21 +146,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $businessPdo) {
     }
 }
 
-// Handle delete
+// Handle delete (SOFT DELETE - set inactive instead of permanent delete)
 if ($action === 'delete' && $editId && $businessPdo) {
     try {
-        $stmt = $businessPdo->prepare("DELETE FROM users WHERE id = ?");
+        // Soft delete: set is_active = 0 instead of DELETE to preserve FK constraints
+        $stmt = $businessPdo->prepare("UPDATE users SET is_active = 0 WHERE id = ?");
         $stmt->execute([$editId]);
         
         $auth->logAction('delete_business_user', 'users', $editId, null, [
             'business' => $businessConfig['business_name']
         ]);
         
-        $_SESSION['success_message'] = 'User deleted successfully!';
+        $_SESSION['success_message'] = 'User deactivated successfully!';
         header("Location: business-users.php?business_id={$selectedBusinessId}");
         exit;
     } catch (Exception $e) {
-        $_SESSION['error_message'] = 'Failed to delete user: ' . $e->getMessage();
+        $_SESSION['error_message'] = 'Failed to deactivate user: ' . $e->getMessage();
     }
 }
 
