@@ -105,6 +105,9 @@ if ($action === 'delete' && $editId) {
         if ((int)$editId === (int)$user['id']) {
             $_SESSION['error_message'] = 'You cannot delete yourself!';
         } else {
+            // Disable FK checks first to avoid constraint violations
+            $pdo->exec("SET FOREIGN_KEY_CHECKS=0");
+            
             // Check if user owns any businesses
             $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM businesses WHERE owner_id = ?");
             $stmt->execute([$editId]);
@@ -117,25 +120,27 @@ if ($action === 'delete' && $editId) {
                 $stmt->execute([$user['id'], $editId]);
             }
             
-            // Delete from dependent tables first (respecting cascades)
-            $pdo->exec("SET FOREIGN_KEY_CHECKS=0");
-            
             // Delete user menu permissions
             $stmt = $pdo->prepare("DELETE FROM user_menu_permissions WHERE user_id = ?");
             $stmt->execute([$editId]);
             
             // Delete user business assignments
-            $stmt = $pdo->prepare("DELETE FROM user_business_assignment WHERE user_id = ?");
-            $stmt->execute([$editId]);
+            if ($pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_business_assignment'")->fetchColumn() > 0) {
+                $stmt = $pdo->prepare("DELETE FROM user_business_assignment WHERE user_id = ?");
+                $stmt->execute([$editId]);
+            }
             
             // Delete user preferences
-            $stmt = $pdo->prepare("DELETE FROM user_preferences WHERE user_id = ?");
-            $stmt->execute([$editId]);
+            if ($pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_preferences'")->fetchColumn() > 0) {
+                $stmt = $pdo->prepare("DELETE FROM user_preferences WHERE user_id = ?");
+                $stmt->execute([$editId]);
+            }
             
             // Delete the user
             $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
             $stmt->execute([$editId]);
             
+            // Re-enable FK checks
             $pdo->exec("SET FOREIGN_KEY_CHECKS=1");
             
             $auth->logAction('delete_user', 'users', $editId);
@@ -147,6 +152,8 @@ if ($action === 'delete' && $editId) {
         header('Location: users.php');
         exit;
     } catch (Exception $e) {
+        // Re-enable FK checks on error
+        try { $pdo->exec("SET FOREIGN_KEY_CHECKS=1"); } catch (Exception $ignored) {}
         $_SESSION['error_message'] = 'Failed to delete user: ' . $e->getMessage();
     }
 }
