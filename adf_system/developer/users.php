@@ -105,10 +105,44 @@ if ($action === 'delete' && $editId) {
         if ((int)$editId === (int)$user['id']) {
             $_SESSION['error_message'] = 'You cannot delete yourself!';
         } else {
+            // Check if user owns any businesses
+            $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM businesses WHERE owner_id = ?");
+            $stmt->execute([$editId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $ownedBusinessesCount = $result['count'] ?? 0;
+            
+            if ($ownedBusinessesCount > 0) {
+                // Reassign businesses to current user (admin)
+                $stmt = $pdo->prepare("UPDATE businesses SET owner_id = ? WHERE owner_id = ?");
+                $stmt->execute([$user['id'], $editId]);
+            }
+            
+            // Delete from dependent tables first (respecting cascades)
+            $pdo->exec("SET FOREIGN_KEY_CHECKS=0");
+            
+            // Delete user menu permissions
+            $stmt = $pdo->prepare("DELETE FROM user_menu_permissions WHERE user_id = ?");
+            $stmt->execute([$editId]);
+            
+            // Delete user business assignments
+            $stmt = $pdo->prepare("DELETE FROM user_business_assignment WHERE user_id = ?");
+            $stmt->execute([$editId]);
+            
+            // Delete user preferences
+            $stmt = $pdo->prepare("DELETE FROM user_preferences WHERE user_id = ?");
+            $stmt->execute([$editId]);
+            
+            // Delete the user
             $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
             $stmt->execute([$editId]);
+            
+            $pdo->exec("SET FOREIGN_KEY_CHECKS=1");
+            
             $auth->logAction('delete_user', 'users', $editId);
-            $_SESSION['success_message'] = 'User deleted successfully!';
+            $deleteMsg = $ownedBusinessesCount > 0 
+                ? "User deleted successfully! Their $ownedBusinessesCount business(es) reassigned to you."
+                : 'User deleted successfully!';
+            $_SESSION['success_message'] = $deleteMsg;
         }
         header('Location: users.php');
         exit;
