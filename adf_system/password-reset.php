@@ -81,6 +81,19 @@ function sanitize($input) {
         .user-list h3 { margin-top: 0; }
         .user-item { padding: 8px; background: white; margin: 5px 0; border-radius: 3px; border-left: 3px solid #2196F3; }
         .user-item strong { color: #2196F3; }
+        .password-wrapper { position: relative; }
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #666;
+            font-size: 1.25rem;
+            user-select: none;
+            transition: color 0.2s;
+        }
+        .password-toggle:hover { color: #333; }
     </style>
 </head>
 <body>
@@ -110,12 +123,18 @@ function sanitize($input) {
             
             <div class="form-group">
                 <label for="new_password">New Password:</label>
-                <input type="password" id="new_password" name="new_password" required>
+                <div class="password-wrapper">
+                    <input type="password" id="new_password" name="new_password" required style="padding-right: 45px;">
+                    <span class="password-toggle" onclick="togglePassword('new_password', this)">👁️</span>
+                </div>
             </div>
             
             <div class="form-group">
                 <label for="confirm_password">Confirm Password:</label>
-                <input type="password" id="confirm_password" name="confirm_password" required>
+                <div class="password-wrapper">
+                    <input type="password" id="confirm_password" name="confirm_password" required style="padding-right: 45px;">
+                    <span class="password-toggle" onclick="togglePassword('confirm_password', this)">👁️</span>
+                </div>
             </div>
             
             <button type="submit">Reset Password</button>
@@ -138,5 +157,18 @@ function sanitize($input) {
             cashier  cashier
         </p>
     </div>
+    
+    <script>
+    function togglePassword(inputId, iconElement) {
+        const input = document.getElementById(inputId);
+        if (input.type === 'password') {
+            input.type = 'text';
+            iconElement.textContent = '👁️‍🗨️';
+        } else {
+            input.type = 'password';
+            iconElement.textContent = '👁️';
+        }
+    }
+    </script>
 </body>
 </html>

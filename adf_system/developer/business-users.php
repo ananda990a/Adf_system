@@ -261,6 +261,23 @@ require_once __DIR__ . '/includes/header.php';
     border-color: var(--dev-primary) !important;
     transform: translateX(5px);
 }
+.password-wrapper {
+    position: relative;
+}
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #6c757d;
+    font-size: 1.25rem;
+    user-select: none;
+    transition: color 0.2s;
+}
+.password-toggle:hover {
+    color: #495057;
+}
 </style>
 
 <div class="container-fluid py-4">
@@ -374,7 +391,10 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Password <?php echo $action === 'add' ? '<span class="text-danger">*</span>' : '(kosongkan jika tidak diubah)'; ?></label>
-                                <input type="password" class="form-control" name="password" <?php echo $action === 'add' ? 'required' : ''; ?>>
+                                <div class="password-wrapper">
+                                    <input type="password" class="form-control" name="password" id="userPassword" <?php echo $action === 'add' ? 'required' : ''; ?> style="padding-right: 45px;">
+                                    <span class="password-toggle" onclick="togglePassword('userPassword', this)">👁️</span>
+                                </div>
                                 <small class="text-muted">
                                     <?php if ($action === 'edit'): ?>
                                     <i class="bi bi-shield-check"></i> <strong>Developer Reset:</strong> Tidak perlu password lama
@@ -641,6 +661,17 @@ function copyEditLoginLink() {
     }).catch(function(err) {
         alert('Failed to copy: ' + err);
     });
+}
+
+function togglePassword(inputId, iconElement) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') {
+        input.type = 'text';
+        iconElement.textContent = '👁️‍🗨️'; // Eye with slash
+    } else {
+        input.type = 'password';
+        iconElement.textContent = '👁️'; // Normal eye
+    }
 }
 </script>
 

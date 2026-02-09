@@ -270,6 +270,26 @@ if (isset($_GET['biz'])) {
             margin-bottom: 0.5rem;
         }
         
+        .password-wrapper {
+            position: relative;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #94a3b8;
+            font-size: 1.25rem;
+            user-select: none;
+            transition: color 0.2s;
+        }
+        
+        .password-toggle:hover {
+            color: #cbd5e1;
+        }
+        
         .form-control {
             width: 100%;
             padding: 0.75rem;
@@ -425,7 +445,10 @@ if (isset($_GET['biz'])) {
                 
                 <div class="form-group">
                     <label class="form-label">Password</label>
-                    <input type="password" name="password" class="form-control" placeholder="Masukkan password" required>
+                    <div class="password-wrapper">
+                        <input type="password" name="password" id="loginPassword" class="form-control" placeholder="Masukkan password" required style="padding-right: 45px;">
+                        <span class="password-toggle" onclick="togglePassword('loginPassword', this)">👁️</span>
+                    </div>
                 </div>
                 
                 <button type="submit" class="btn-primary">Login</button>
@@ -442,5 +465,18 @@ if (isset($_GET['biz'])) {
             </div>
         </div>
     </div>
+    
+    <script>
+    function togglePassword(inputId, iconElement) {
+        const input = document.getElementById(inputId);
+        if (input.type === 'password') {
+            input.type = 'text';
+            iconElement.textContent = '👁️‍🗨️'; // Eye with slash
+        } else {
+            input.type = 'password';
+            iconElement.textContent = '👁️'; // Normal eye
+        }
+    }
+    </script>
 </body>
 </html>
