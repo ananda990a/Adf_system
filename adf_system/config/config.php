@@ -4,8 +4,19 @@
  * Configuration File
  */
 
+// START: Buffer & Session MUST be first before any output
 if (!ob_get_level()) {
     ob_start();
+}
+
+// Session configuration BEFORE any requires
+define('SESSION_NAME', 'NARAYANA_SESSION');
+define('SESSION_LIFETIME', 3600 * 8);
+
+// Initialize session BEFORE anything else
+if (session_status() === PHP_SESSION_NONE) {
+    session_name(SESSION_NAME);
+    session_start();
 }
 
 // Prevent direct access
@@ -47,16 +58,19 @@ define('DB_CHARSET', 'utf8mb4');
 // ============================================
 define('BASE_PATH', dirname(dirname(__FILE__)));
 
+// Handle both web and CLI environment
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $port = $_SERVER['SERVER_PORT'] ?? '80';
 $portSuffix = ($port != '80' && $port != '443') ? ':' . $port : '';
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-define('BASE_URL', $protocol . '://' . $_SERVER['HTTP_HOST'] . '/adf_system');
 
-// ============================================
-// SESSION CONFIGURATION
-// ============================================
-define('SESSION_NAME', 'NARAYANA_SESSION');
-define('SESSION_LIFETIME', 3600 * 8);
+// Only define BASE_URL in web environment
+if (php_sapi_name() !== 'cli') {
+    define('BASE_URL', $protocol . '://' . $host . '/adf_system');
+} else {
+    // For CLI, just use a placeholder
+    define('BASE_URL', 'http://localhost/adf_system');
+}
 
 // ============================================
 // TIMEZONE
@@ -90,11 +104,6 @@ define('TIME_FORMAT', 'H:i');
 // ============================================
 // MULTI-BUSINESS CONFIGURATION
 // ============================================
-if (session_status() === PHP_SESSION_NONE) {
-    session_name(SESSION_NAME);
-    session_start();
-}
-
 require_once __DIR__ . '/../includes/business_helper.php';
 
 $activeBusinessId = getActiveBusinessId();

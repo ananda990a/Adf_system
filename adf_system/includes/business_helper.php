@@ -38,16 +38,9 @@ function getAvailableBusinesses() {
  * @return string Business ID
  */
 function getActiveBusinessId() {
-    // Start session if not started
-    if (session_status() === PHP_SESSION_NONE) {
-        if (defined('SESSION_NAME')) {
-            session_name(SESSION_NAME);
-        }
-        session_start();
-    }
-    
-    // Check if business is set in session
-    if (isset($_SESSION['active_business_id'])) {
+    // Session should already be started by config.php
+    // Just check if business is set in session
+    if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['active_business_id'])) {
         return $_SESSION['active_business_id'];
     }
     
@@ -55,7 +48,9 @@ function getActiveBusinessId() {
     $businesses = getAvailableBusinesses();
     if (!empty($businesses)) {
         $firstBusinessId = array_key_first($businesses);
-        setActiveBusinessId($firstBusinessId);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            $_SESSION['active_business_id'] = $firstBusinessId;
+        }
         return $firstBusinessId;
     }
     
@@ -69,19 +64,15 @@ function getActiveBusinessId() {
  * @return bool Success
  */
 function setActiveBusinessId($businessId) {
-    // Start session if not started
-    if (session_status() === PHP_SESSION_NONE) {
-        if (defined('SESSION_NAME')) {
-            session_name(SESSION_NAME);
+    // Session should already be started by config.php
+    // Just set the value if session is active
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        // Validate business exists
+        $businessFile = __DIR__ . '/../config/businesses/' . $businessId . '.php';
+        if (file_exists($businessFile)) {
+            $_SESSION['active_business_id'] = $businessId;
+            return true;
         }
-        session_start();
-    }
-    
-    // Validate business exists
-    $businessFile = __DIR__ . '/../config/businesses/' . $businessId . '.php';
-    if (file_exists($businessFile)) {
-        $_SESSION['active_business_id'] = $businessId;
-        return true;
     }
     
     return false;

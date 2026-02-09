@@ -3,6 +3,10 @@
  * Test Database Connection
  */
 
+// REQUIRE CONFIG FIRST - before any output!
+require_once 'config/config.php';
+
+// NOW we can output
 echo "<h2>📡 DATABASE CONNECTION TEST</h2>";
 echo "<hr>";
 
@@ -50,23 +54,20 @@ try {
 
 echo "<br><br>";
 
-// Test 3: Config File
-echo "<h3>3️⃣ Testing CONFIG.PHP</h3>";
-try {
-    require_once 'config/config.php';
-    echo "<div style='background:#2196F3; color:white; padding:15px; border-radius:5px;'>";
-    echo "✅ CONFIG.PHP loaded<br>";
-    echo "App Name: " . APP_NAME . "<br>";
-    echo "DB_HOST: " . DB_HOST . "<br>";
-    echo "DB_NAME: " . DB_NAME . "<br>";
-    echo "DB_USER: " . DB_USER . "";
+// Test 3: Session Status
+echo "<h3>3️⃣ Session Status</h3>";
+if (session_status() === PHP_SESSION_ACTIVE) {
+    echo "<div style='background:#4CAF50; color:white; padding:15px; border-radius:5px;'>";
+    echo "✅ SESSION: Active and properly initialized<br>";
+    echo "Session Name: " . session_name() . "";
     echo "</div>";
-} catch (Exception $e) {
+} else {
     echo "<div style='background:#f44336; color:white; padding:15px; border-radius:5px;'>";
-    echo "❌ CONFIG.PHP ERROR: " . $e->getMessage() . "";
+    echo "❌ SESSION: Not Active<br>";
     echo "</div>";
 }
 
 echo "<hr>";
-echo "<p><strong>If all tests pass, your system is ready for deployment!</strong></p>";
+echo "<p><strong>All tests completed!</strong></p>";
 ?>
+

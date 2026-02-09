@@ -4,12 +4,8 @@
  * Load user's preferred language or default to Indonesian
  */
 
-// Start session if not started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Get user language from session or default
+// Session is already started by config.php
+// Just get user's preferred language
 $userLang = $_SESSION['user_language'] ?? 'id';
 
 // Load language file
