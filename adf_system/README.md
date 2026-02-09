@@ -4,6 +4,8 @@ Sistem Management Hotel dengan fokus Accounting yang modern dan mobile-friendly.
 
 ## 🚀 Features
 
+Deploy test
+
 ### ✅ Sudah Dibuat (Fase 1 Complete!)
 
 1. **Database Structure**
