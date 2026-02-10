@@ -182,155 +182,151 @@ try {
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<div class="container-fluid py-4">
+<div class="container-fluid py-3">
+    <!-- Success/Error Messages -->
+    <?php if ($error): ?>
+    <div class="alert alert-danger alert-dismissible fade show alert-sm">
+        <i class="bi bi-exclamation-triangle me-2"></i><?php echo htmlspecialchars($error); ?>
+        <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"></button>
+    </div>
+    <?php endif; ?>
+    
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0"><i class="bi bi-people me-2"></i>User Management</h5>
+        <?php if ($action !== 'add' && $action !== 'edit'): ?>
+        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#userModal">
+            <i class="bi bi-person-plus me-1"></i>Add User
+        </button>
+        <?php endif; ?>
+    </div>
+    
     <?php if ($action === 'add' || $action === 'edit'): ?>
-    <!-- Add/Edit Form -->
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="content-card">
-                <div class="card-header-custom">
-                    <h5><i class="bi bi-person-<?php echo $action === 'add' ? 'plus' : 'gear'; ?> me-2"></i>
-                        <?php echo $action === 'add' ? 'Add New User' : 'Edit User'; ?>
-                    </h5>
-                    <a href="users.php" class="btn btn-sm btn-outline-secondary">
-                        <i class="bi bi-arrow-left me-1"></i>Back to List
-                    </a>
+    <!-- Back Button -->
+    <div class="mb-3">
+        <a href="users.php" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Back to List
+        </a>
+    </div>
+    
+    <!-- Form Card -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-3">
+            <h6 class="card-title mb-3">
+                <i class="bi bi-person-<?php echo $action === 'add' ? 'plus' : 'gear'; ?> me-2"></i>
+                <?php echo $action === 'add' ? 'Add New User' : 'Edit User'; ?>
+            </h6>
+            
+            <form method="POST" action="">
+                <input type="hidden" name="form_action" value="<?php echo $action === 'add' ? 'create' : 'update'; ?>">
+                <?php if ($editUser): ?>
+                <input type="hidden" name="user_id" value="<?php echo $editUser['id']; ?>">
+                <?php endif; ?>
+                
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label class="form-label form-label-sm">Username <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" name="username" required
+                               value="<?php echo htmlspecialchars($editUser['username'] ?? ''); ?>">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label form-label-sm">Email <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control form-control-sm" name="email" required
+                               value="<?php echo htmlspecialchars($editUser['email'] ?? ''); ?>">
+                    </div>
                 </div>
                 
-                <div class="p-4">
-                    <?php if ($error): ?>
-                    <div class="alert alert-danger alert-dismissible fade show">
-                        <i class="bi bi-exclamation-triangle me-2"></i><?php echo htmlspecialchars($error); ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <div class="row g-2 mt-1">
+                    <div class="col-md-6">
+                        <label class="form-label form-label-sm">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" name="full_name" required
+                               value="<?php echo htmlspecialchars($editUser['full_name'] ?? ''); ?>">
                     </div>
-                    <?php endif; ?>
-                    
-                    <form method="POST" action="">
-                        <input type="hidden" name="form_action" value="<?php echo $action === 'add' ? 'create' : 'update'; ?>">
-                        <?php if ($editUser): ?>
-                        <input type="hidden" name="user_id" value="<?php echo $editUser['id']; ?>">
-                        <?php endif; ?>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Username <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="username" required
-                                       value="<?php echo htmlspecialchars($editUser['username'] ?? ''); ?>">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Email <span class="text-danger">*</span></label>
-                                <input type="email" class="form-control" name="email" required
-                                       value="<?php echo htmlspecialchars($editUser['email'] ?? ''); ?>">
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Full Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="full_name" required
-                                       value="<?php echo htmlspecialchars($editUser['full_name'] ?? ''); ?>">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Phone</label>
-                                <input type="text" class="form-control" name="phone"
-                                       value="<?php echo htmlspecialchars($editUser['phone'] ?? ''); ?>">
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Role <span class="text-danger">*</span></label>
-                                <select class="form-select" name="role_id" required>
-                                    <option value="">Select Role</option>
-                                    <?php foreach ($roles as $role): ?>
-                                    <option value="<?php echo $role['id']; ?>" 
-                                            <?php echo ($editUser['role_id'] ?? '') == $role['id'] ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($role['role_name']); ?> (<?php echo $role['role_code']; ?>)
-                                    </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Password <?php echo $action === 'add' ? '<span class="text-danger">*</span>' : '(leave blank to keep current)'; ?></label>
-                                <input type="password" class="form-control" name="password" <?php echo $action === 'add' ? 'required' : ''; ?>>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" name="is_active" id="is_active"
-                                       <?php echo ($editUser['is_active'] ?? 1) ? 'checked' : ''; ?>>
-                                <label class="form-check-label" for="is_active">Active User</label>
-                            </div>
-                        </div>
-                        
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i><?php echo $action === 'add' ? 'Create User' : 'Update User'; ?>
-                            </button>
-                            <a href="users.php" class="btn btn-outline-secondary">Cancel</a>
-                        </div>
-                    </form>
+                    <div class="col-md-6">
+                        <label class="form-label form-label-sm">Phone</label>
+                        <input type="text" class="form-control form-control-sm" name="phone"
+                               value="<?php echo htmlspecialchars($editUser['phone'] ?? ''); ?>">
+                    </div>
                 </div>
-            </div>
+                
+                <div class="row g-2 mt-1">
+                    <div class="col-md-6">
+                        <label class="form-label form-label-sm">Role <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-sm" name="role_id" required>
+                            <option value="">Select Role</option>
+                            <?php foreach ($roles as $role): ?>
+                            <option value="<?php echo $role['id']; ?>" 
+                                    <?php echo ($editUser['role_id'] ?? '') == $role['id'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($role['role_name']); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label form-label-sm">Password <?php echo $action === 'add' ? '<span class="text-danger">*</span>' : ''; ?></label>
+                        <input type="password" class="form-control form-control-sm" name="password" <?php echo $action === 'add' ? 'required' : ''; ?>
+                               placeholder="<?php echo $action === 'add' ? 'Required' : 'Leave blank to keep'; ?>">
+                    </div>
+                </div>
+                
+                <div class="mt-2">
+                    <div class="form-check form-check-sm">
+                        <input class="form-check-input" type="checkbox" name="is_active" id="is_active"
+                               <?php echo ($editUser['is_active'] ?? 1) ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="is_active">Active User</label>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-2 mt-3">
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="bi bi-check-lg me-1"></i><?php echo $action === 'add' ? 'Create' : 'Update'; ?>
+                    </button>
+                    <a href="users.php" class="btn btn-sm btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
         </div>
     </div>
     
     <?php else: ?>
-    <!-- Users List -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">Users Management</h4>
-                <a href="?action=add" class="btn btn-primary">
-                    <i class="bi bi-person-plus me-1"></i>Add New User
-                </a>
-            </div>
-        </div>
-    </div>
-    
-    <div class="content-card">
+    <!-- Users Table -->
+    <div class="card border-0 shadow-sm">
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
                     <tr>
-                        <th>User</th>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>Assigned Businesses</th>
-                        <th>Status</th>
-                        <th>Last Login</th>
-                        <th>Actions</th>
+                        <th style="width:25%;">User</th>
+                        <th style="width:20%;">Email</th>
+                        <th style="width:12%;">Role</th>
+                        <th style="width:13%;">Status</th>
+                        <th style="width:20%;">Last Login</th>
+                        <th style="width:10%;" class="text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($users)): ?>
                     <tr>
-                        <td colspan="7" class="text-center py-5 text-muted">
-                            <i class="bi bi-people fs-1 d-block mb-2"></i>
-                            No users found. <a href="?action=add">Create one</a>
+                        <td colspan="6" class="text-center py-4 text-muted">
+                            <i class="bi bi-people fs-5 d-block mb-2"></i>
+                            No users found
                         </td>
                     </tr>
                     <?php else: ?>
                     <?php foreach ($users as $u): ?>
                     <tr>
                         <td>
-                            <div class="d-flex align-items-center">
-                                <div class="user-avatar me-2" style="width:30px;height:30px;font-size:0.75rem;">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="user-avatar" style="width:28px;height:28px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#6c757d;color:white;">
                                     <?php echo strtoupper(substr($u['full_name'], 0, 1)); ?>
                                 </div>
-                                <div>
-                                    <strong style="font-size:0.85rem;"><?php echo htmlspecialchars($u['full_name']); ?></strong>
-                                    <br><small class="text-muted" style="font-size:0.7rem;">@<?php echo htmlspecialchars($u['username']); ?></small>
+                                <div style="line-height:1.2;">
+                                    <strong style="font-size:0.85rem;display:block;"><?php echo htmlspecialchars($u['full_name']); ?></strong>
+                                    <small class="text-muted" style="font-size:0.75rem;">@<?php echo htmlspecialchars($u['username']); ?></small>
                                 </div>
                             </div>
                         </td>
-                        <td><?php echo htmlspecialchars($u['email']); ?></td>
+                        <td style="font-size:0.85rem;"><?php echo htmlspecialchars($u['email']); ?></td>
                         <td>
-                            <span class="badge bg-<?php 
-                                echo $u['role_code'] === 'developer' ? 'purple' : 
-                                    ($u['role_code'] === 'owner' ? 'info' : 'secondary'); 
-                            ?>" style="background-color: <?php 
+                            <span class="badge" style="font-size:0.75rem;background-color:<?php 
                                 echo $u['role_code'] === 'developer' ? '#6f42c1' : 
                                     ($u['role_code'] === 'owner' ? '#3b82f6' : '#6c757d'); 
                             ?>">
@@ -338,35 +334,29 @@ require_once __DIR__ . '/includes/header.php';
                             </span>
                         </td>
                         <td>
-                            <?php if ($u['business_count'] > 0): ?>
-                            <span class="badge bg-success"><?php echo $u['business_count']; ?> business(es)</span>
-                            <?php else: ?>
-                            <span class="text-muted">None</span>
-                            <?php endif; ?>
-                        </td>
-                        <td>
                             <?php if ($u['is_active']): ?>
-                            <span class="badge bg-success">Active</span>
+                            <span class="badge bg-success" style="font-size:0.75rem;">Active</span>
                             <?php else: ?>
-                            <span class="badge bg-danger">Inactive</span>
+                            <span class="badge bg-danger" style="font-size:0.75rem;">Inactive</span>
                             <?php endif; ?>
                         </td>
-                        <td>
+                        <td style="font-size:0.85rem;">
                             <?php echo $u['last_login'] ? date('M d, Y H:i', strtotime($u['last_login'])) : '<span class="text-muted">Never</span>'; ?>
                         </td>
-                        <td>
-                            <a href="?action=edit&id=<?php echo $u['id']; ?>" class="btn btn-sm btn-outline-primary px-2 py-1" title="Edit">
-                                <i class="bi bi-pencil" style="font-size:0.8rem;"></i>
-                            </a>
-                            <a href="user-business.php?user_id=<?php echo $u['id']; ?>" class="btn btn-sm btn-outline-info px-2 py-1" title="Assign Business">
-                                <i class="bi bi-building" style="font-size:0.8rem;"></i>
-                            </a>
-                            <?php if ($u['id'] != $user['id']): ?>
-                            <button onclick="confirmDelete('?action=delete&id=<?php echo $u['id']; ?>', '<?php echo addslashes($u['full_name']); ?>')" 
-                                    class="btn btn-sm btn-outline-danger px-2 py-1" title="Delete">
-                                <i class="bi bi-trash" style="font-size:0.8rem;"></i>
-                            </button>
-                            <?php endif; ?>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="?action=edit&id=<?php echo $u['id']; ?>" class="btn btn-outline-primary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="user-setup-simple.php?user_id=<?php echo $u['id']; ?>" class="btn btn-outline-info" title="Assign Business">
+                                    <i class="bi bi-building"></i>
+                                </a>
+                                <?php if ($u['id'] != $user['id']): ?>
+                                <button type="button" class="btn btn-outline-danger" onclick="confirmDelete('?action=delete&id=<?php echo $u['id']; ?>', '<?php echo addslashes($u['full_name']); ?>')" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -377,5 +367,69 @@ require_once __DIR__ . '/includes/header.php';
     </div>
     <?php endif; ?>
 </div>
+
+<style>
+    .form-label-sm {
+        font-size: 0.85rem;
+        margin-bottom: 0.3rem;
+        font-weight: 500;
+    }
+    
+    .form-control-sm, .form-select-sm {
+        font-size: 0.85rem;
+        padding: 0.35rem 0.5rem;
+        height: auto;
+        min-height: 2rem;
+    }
+    
+    .alert-sm {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+    }
+    
+    .btn-close-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+    
+    .table-sm {
+        font-size: 0.875rem;
+    }
+    
+    .table-sm th,
+    .table-sm td {
+        padding: 0.5rem 0.75rem;
+        vertical-align: middle;
+    }
+    
+    .card {
+        border-radius: 0.5rem;
+    }
+    
+    .user-avatar {
+        font-weight: 600;
+        font-size: 0.8rem;
+        background-color: #6c757d;
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .table-sm th:nth-child(n+4),
+        .table-sm td:nth-child(n+4) {
+            display: none;
+        }
+        
+        .btn-group-sm {
+            flex-direction: column;
+            width: 100%;
+        }
+        
+        .btn-group-sm .btn {
+            border-radius: 0.25rem;
+            width: 100%;
+            margin-bottom: 0.25rem;
+        }
+    }
+</style>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
