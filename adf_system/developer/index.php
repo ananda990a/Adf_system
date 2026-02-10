@@ -61,6 +61,15 @@ if ($section === 'user-setup') {
     $activeStep = $_GET['step'] ?? 'users';
     $selectedUserId = $_GET['user_id'] ?? null;
     
+    // Initialize variables
+    $editUser = null;
+    $users = [];
+    $roles = [];
+    $allBusinesses = [];
+    $assignedBusinesses = [];
+    $userBusinesses = [];
+    $menus = [];
+    
     // =============================================
     // STEP 1: USER LOGIN MANAGEMENT
     // =============================================
@@ -219,28 +228,41 @@ if ($section === 'user-setup') {
             $activeStep = 'users';
         } else {
             // Handle permission updates
-            if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+            if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_permission') {
                 try {
-                    $businessId = $_POST['business_id'];
-                    $menuCode = $_POST['menu_code'];
-                    $permission = $_POST['permission'];
+                    $businessId = $_POST['business_id'] ?? null;
+                    $permission = $_POST['permission'] ?? null;
                     
-                    // Update or insert permission
+                    if (!$businessId || !$permission) {
+                        throw new Exception('Business dan permission harus dipilih!');
+                    }
+                    
+                    // Set permission values based on level
+                    $permissions = ['can_view' => 1, 'can_create' => 0, 'can_edit' => 0, 'can_delete' => 0];
+                    if ($permission === 'view') {
+                        $permissions = ['can_view' => 1, 'can_create' => 0, 'can_edit' => 0, 'can_delete' => 0];
+                    } elseif ($permission === 'create') {
+                        $permissions = ['can_view' => 1, 'can_create' => 1, 'can_edit' => 1, 'can_delete' => 0];
+                    } elseif ($permission === 'all') {
+                        $permissions = ['can_view' => 1, 'can_create' => 1, 'can_edit' => 1, 'can_delete' => 1];
+                    }
+                    
+                    // Get all menus
+                    $menus = ['dashboard', 'cashbook', 'divisions', 'frontdesk', 'procurement', 'sales', 'reports', 'settings', 'users'];
+                    
+                    // Update all menu permissions for this business
                     $stmt = $pdo->prepare("INSERT INTO user_menu_permissions (user_id, business_id, menu_code, can_view, can_create, can_edit, can_delete) 
                                           VALUES (?, ?, ?, ?, ?, ?, ?) 
                                           ON DUPLICATE KEY UPDATE 
                                           can_view=?, can_create=?, can_edit=?, can_delete=?");
                     
-                    $permissions = ['can_view' => 1, 'can_create' => 0, 'can_edit' => 0, 'can_delete' => 0];
-                    if ($permission === 'view') $permissions = ['can_view' => 1, 'can_create' => 0, 'can_edit' => 0, 'can_delete' => 0];
-                    if ($permission === 'create') $permissions = ['can_view' => 1, 'can_create' => 1, 'can_edit' => 1, 'can_delete' => 0];
-                    if ($permission === 'all') $permissions = ['can_view' => 1, 'can_create' => 1, 'can_edit' => 1, 'can_delete' => 1];
+                    foreach ($menus as $menu) {
+                        $stmt->execute([$selectedUserId, $businessId, $menu, 
+                                       $permissions['can_view'], $permissions['can_create'], $permissions['can_edit'], $permissions['can_delete'],
+                                       $permissions['can_view'], $permissions['can_create'], $permissions['can_edit'], $permissions['can_delete']]);
+                    }
                     
-                    $stmt->execute([$selectedUserId, $businessId, $menuCode, 
-                                   $permissions['can_view'], $permissions['can_create'], $permissions['can_edit'], $permissions['can_delete'],
-                                   $permissions['can_view'], $permissions['can_create'], $permissions['can_edit'], $permissions['can_delete']]);
-                    
-                    $_SESSION['success_message'] = '✅ Permission updated!';
+                    $_SESSION['success_message'] = '✅ Permission updated untuk semua menus!';
                 } catch (Exception $e) {
                     $_SESSION['error_message'] = '❌ Error: ' . $e->getMessage();
                 }
@@ -738,7 +760,7 @@ require_once __DIR__ . '/includes/header.php';
                 <!-- ============== STEP 2: BUSINESS ASSIGNMENT ============== -->
                 <div class="row">
                     <div class="col-12">
-                        <h5 class="mb-3">Selected User: <strong><?php echo htmlspecialchars($editUser['full_name']); ?></strong></h5>
+                        <h5 class="mb-3">Selected User: <strong><?php echo htmlspecialchars($editUser['full_name'] ?? 'User'); ?></strong></h5>
                         <p class="text-muted">Select which businesses this user should have access to:</p>
                         
                         <div class="row">
@@ -752,7 +774,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <div class="card business-card <?php echo in_array($biz['id'], $assignedBusinesses) ? 'selected' : ''; ?>" id="biz_<?php echo $biz['id']; ?>">
                                     <div class="card-body">
                                         <div class="form-check">
-                                            <input type="checkbox" class="form-check-input business-checkbox" id="biz_check_<?php echo $biz['id']; ?>" data-business-id="<?php echo $biz['id']; ?>" <?php echo in_array($biz['id'], $assignedBusinesses) ? 'checked' : ''; ?>>
+                                            <input type="checkbox" class="form-check-input business-checkbox" id="biz_check_<?php echo $biz['id']; ?>" data-business-id="<?php echo $biz['id']; ?>" data-user-id="<?php echo $selectedUserId; ?>" <?php echo in_array($biz['id'], $assignedBusinesses) ? 'checked' : ''; ?>>
                                             <label class="form-check-label" for="biz_check_<?php echo $biz['id']; ?>">
                                                 <strong><?php echo htmlspecialchars($biz['business_name']); ?></strong>
                                             </label>
@@ -785,38 +807,40 @@ require_once __DIR__ . '/includes/header.php';
                         <?php if (empty($userBusinesses)): ?>
                         <p class="text-center py-5 text-muted">User has no businesses assigned. <a href="?section=user-setup&step=business&user_id=<?php echo $selectedUserId; ?>">Assign businesses first</a></p>
                         <?php else: ?>
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Business</th>
-                                        <th colspan="4" class="text-center">Permissions</th>
-                                    </tr>
-                                    <tr>
-                                        <th></th>
-                                        <th class="text-center"><small>View Only</small></th>
-                                        <th class="text-center"><small>Create/Edit</small></th>
-                                        <th class="text-center"><small>Delete</small></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($userBusinesses as $biz): ?>
-                                    <tr>
-                                        <td><strong><?php echo htmlspecialchars($biz['business_name']); ?></strong></td>
-                                        <td class="text-center">
-                                            <input type="radio" name="perm_<?php echo $biz['id']; ?>" value="view" class="permission-radio">
-                                        </td>
-                                        <td class="text-center">
-                                            <input type="radio" name="perm_<?php echo $biz['id']; ?>" value="create" class="permission-radio">
-                                        </td>
-                                        <td class="text-center">
-                                            <input type="radio" name="perm_<?php echo $biz['id']; ?>" value="all" class="permission-radio">
-                                        </td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
+                        <form id="permissionsForm" method="POST">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Business</th>
+                                            <th colspan="4" class="text-center">Permissions</th>
+                                        </tr>
+                                        <tr>
+                                            <th></th>
+                                            <th class="text-center"><small>View Only</small></th>
+                                            <th class="text-center"><small>Create/Edit</small></th>
+                                            <th class="text-center"><small>All Access</small></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($userBusinesses as $biz): ?>
+                                        <tr>
+                                            <td><strong><?php echo htmlspecialchars($biz['business_name']); ?></strong></td>
+                                            <td class="text-center">
+                                                <input type="radio" name="perm_<?php echo $biz['id']; ?>" value="view" class="permission-radio" data-business-id="<?php echo $biz['id']; ?>">
+                                            </td>
+                                            <td class="text-center">
+                                                <input type="radio" name="perm_<?php echo $biz['id']; ?>" value="create" class="permission-radio" data-business-id="<?php echo $biz['id']; ?>">
+                                            </td>
+                                            <td class="text-center">
+                                                <input type="radio" name="perm_<?php echo $biz['id']; ?>" value="all" class="permission-radio" data-business-id="<?php echo $biz['id']; ?>">
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </form>
                         <?php endif; ?>
                         
                         <hr>
@@ -1138,13 +1162,69 @@ require_once __DIR__ . '/includes/header.php';
         input.type = type;
     }
     
+    // Handle business checkbox changes
     document.querySelectorAll('.business-checkbox').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             const card = document.getElementById('biz_' + this.dataset.businessId);
+            const businessId = this.dataset.businessId;
+            const userId = this.dataset.userId;
+            const action = this.checked ? 'assign' : 'remove';
+            
+            // Visual feedback
             if (this.checked) {
                 card.classList.add('selected');
             } else {
                 card.classList.remove('selected');
+            }
+            
+            // Send to server
+            const formData = new FormData();
+            formData.append('action', action);
+            formData.append('business_id', businessId);
+            
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                console.log(action === 'assign' ? '✅ Business assigned' : '✅ Business removed');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Revert checkbox on error
+                this.checked = !this.checked;
+                if (this.checked) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            });
+        });
+    });
+    
+    // Handle permission radio changes
+    document.querySelectorAll('.permission-radio').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const businessId = this.dataset.businessId;
+            const permission = this.value;
+            const userId = document.querySelector('input[name="user_id"]') ? document.querySelector('input[name="user_id"]').value : null;
+            
+            if (businessId && permission) {
+                const formData = new FormData();
+                formData.append('action', 'update_permission');
+                formData.append('business_id', businessId);
+                formData.append('permission', permission);
+                
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(data => {
+                    console.log('✅ Permission updated');
+                })
+                .catch(error => console.error('Error:', error));
             }
         });
     });
