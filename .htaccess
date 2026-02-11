@@ -1,7 +1,3 @@
-# Disable directory listing
+# Empty .htaccess file
+# Disable directory listing only
 Options -Indexes
-
-# Allow access to all files
-<IfModule mod_authz_core.c>
-    Require all granted
-</IfModule>
