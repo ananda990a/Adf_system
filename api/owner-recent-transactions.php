@@ -1,7 +1,7 @@
 <?php
 /**
  * API: Owner Recent Transactions
- * Get recent transactions from accessible businesses
+ * Get recent transactions
  */
 error_reporting(0);
 ini_set('display_errors', 0);
@@ -9,7 +9,6 @@ ini_set('display_errors', 0);
 require_once '../config/config.php';
 require_once '../config/database.php';
 require_once '../includes/auth.php';
-require_once '../includes/business_access.php';
 
 header('Content-Type: application/json');
 
@@ -21,68 +20,40 @@ if (!$auth->isLoggedIn()) {
 
 $currentUser = $auth->getCurrentUser();
 
-// Check if user is owner or admin
-if ($currentUser['role'] !== 'owner' && $currentUser['role'] !== 'admin') {
+// Check if user is owner, admin, manager, or developer
+if (!in_array($currentUser['role'], ['owner', 'admin', 'manager', 'developer'])) {
     echo json_encode(['success' => false, 'message' => 'Access denied']);
     exit;
 }
 
-$specificBusinessId = isset($_GET['branch_id']) ? (int)$_GET['branch_id'] : null;
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
 
 try {
-    // Use single database (adf_narayana)
-    $db = Database::getInstance();
+    // Switch to hotel database
+    $db = Database::switchDatabase('adf_narayana_hotel');
     
-    // Get user's business_access
-    $businessAccess = $currentUser['business_access'] ?? null;
-    
-    if (!$businessAccess || $businessAccess === 'null') {
-        $user = $db->fetchOne(
-            "SELECT business_access FROM users WHERE id = ?",
-            [$currentUser['id']]
-        );
-        $businessAccess = $user['business_access'] ?? '[]';
-    }
-    
-    $accessibleBusinessIds = json_decode($businessAccess, true);
-    if (!is_array($accessibleBusinessIds) || empty($accessibleBusinessIds)) {
-        echo json_encode([
-            'success' => true,
-            'transactions' => [],
-            'count' => 0
-        ]);
-        exit;
-    }
-    
-    // Filter to specific business if requested
-    if ($specificBusinessId && in_array($specificBusinessId, $accessibleBusinessIds)) {
-        $businessFilter = " AND cb.branch_id = ?";
-        $businessParams = [$specificBusinessId];
-    } else {
-        $placeholders = implode(',', array_fill(0, count($accessibleBusinessIds), '?'));
-        $businessFilter = " AND cb.branch_id IN ($placeholders)";
-        $businessParams = $accessibleBusinessIds;
-    }
-    
-    // Get recent transactions from single database
+    // Get recent transactions
     $transactions = $db->fetchAll(
         "SELECT 
             cb.*,
             d.division_name,
             c.category_name,
-            u.full_name as user_name,
-            b.business_name
+            u.full_name as user_name
          FROM cash_book cb
          LEFT JOIN divisions d ON cb.division_id = d.id
          LEFT JOIN categories c ON cb.category_id = c.id
          LEFT JOIN users u ON cb.created_by = u.id
-         LEFT JOIN businesses b ON cb.branch_id = b.id
-         WHERE DATE(cb.transaction_date) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)" . $businessFilter . "
+         WHERE DATE(cb.transaction_date) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
          ORDER BY cb.transaction_date DESC, cb.transaction_time DESC
          LIMIT ?",
-        array_merge($businessParams, [$limit])
+        [$limit]
     );
+    
+    // Format transactions for display
+    foreach ($transactions as &$tx) {
+        $tx['formatted_date'] = date('d M Y', strtotime($tx['transaction_date']));
+        $tx['formatted_amount'] = number_format($tx['amount'], 0, ',', '.');
+    }
     
     echo json_encode([
         'success' => true,

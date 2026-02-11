@@ -1,7 +1,7 @@
 <?php
 /**
  * API: Owner Statistics
- * Get today and monthly statistics from accessible businesses
+ * Get today and monthly statistics
  */
 error_reporting(0);
 ini_set('display_errors', 0);
@@ -9,7 +9,6 @@ ini_set('display_errors', 0);
 require_once '../config/config.php';
 require_once '../config/database.php';
 require_once '../includes/auth.php';
-require_once '../includes/business_access.php';
 
 header('Content-Type: application/json');
 
@@ -21,110 +20,104 @@ if (!$auth->isLoggedIn()) {
 
 $currentUser = $auth->getCurrentUser();
 
-// Check if user is owner or admin
-if ($currentUser['role'] !== 'owner' && $currentUser['role'] !== 'admin') {
+// Check if user is owner, admin, manager, or developer
+if (!in_array($currentUser['role'], ['owner', 'admin', 'manager', 'developer'])) {
     echo json_encode(['success' => false, 'message' => 'Access denied']);
     exit;
 }
 
-// Get specific business ID if provided (for single business view)
-$specificBusinessId = isset($_GET['branch_id']) ? (int)$_GET['branch_id'] : null;
+// Get selected business
+$branchId = isset($_GET['branch_id']) ? $_GET['branch_id'] : 'all';
 
 try {
     $today = date('Y-m-d');
     $thisMonth = date('Y-m');
     $lastMonth = date('Y-m', strtotime('-1 month'));
     
-    // Use single database instance (adf_narayana)
-    $db = Database::getInstance();
+    // Get businesses list with their database names
+    $mainPdo = new PDO("mysql:host=" . DB_HOST . ";dbname=adf_system;charset=utf8mb4", DB_USER, DB_PASS);
+    $mainPdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
-    // Get user's business_access
-    $businessAccess = $currentUser['business_access'] ?? null;
-    
-    if (!$businessAccess || $businessAccess === 'null') {
-        $user = $db->fetchOne(
-            "SELECT business_access FROM users WHERE id = ?",
-            [$currentUser['id']]
-        );
-        $businessAccess = $user['business_access'] ?? '[]';
-    }
-    
-    $accessibleBusinessIds = json_decode($businessAccess, true);
-    if (!is_array($accessibleBusinessIds) || empty($accessibleBusinessIds)) {
-        echo json_encode([
-            'success' => true,
-            'today' => ['income' => 0, 'expense' => 0, 'income_count' => 0, 'expense_count' => 0, 'net' => 0],
-            'month' => ['income' => 0, 'expense' => 0, 'net' => 0, 'income_change' => 0, 'expense_change' => 0],
-            'message' => 'No businesses accessible'
-        ]);
-        exit;
-    }
-    
-    // Build WHERE clause for business filter
-    if ($specificBusinessId && in_array($specificBusinessId, $accessibleBusinessIds)) {
-        $whereToday = "transaction_date = ? AND branch_id = ?";
-        $whereMonth = "DATE_FORMAT(transaction_date, '%Y-%m') = ? AND branch_id = ?";
-        $paramsToday = [$today, $specificBusinessId];
-        $paramsMonth = [$thisMonth, $specificBusinessId];
-        $paramsLastMonth = [$lastMonth, $specificBusinessId];
+    if ($branchId === 'all' || $branchId === '') {
+        $stmt = $mainPdo->query("SELECT id, business_name, database_name FROM businesses WHERE is_active = 1 ORDER BY id");
+        $businesses = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } else {
-        $placeholders = implode(',', array_fill(0, count($accessibleBusinessIds), '?'));
-        $whereToday = "transaction_date = ? AND branch_id IN ($placeholders)";
-        $whereMonth = "DATE_FORMAT(transaction_date, '%Y-%m') = ? AND branch_id IN ($placeholders)";
-        $paramsToday = array_merge([$today], $accessibleBusinessIds);
-        $paramsMonth = array_merge([$thisMonth], $accessibleBusinessIds);
-        $paramsLastMonth = array_merge([$lastMonth], $accessibleBusinessIds);
+        $stmt = $mainPdo->prepare("SELECT id, business_name, database_name FROM businesses WHERE id = ? AND is_active = 1");
+        $stmt->execute([$branchId]);
+        $businesses = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    // TODAY STATS
-    $todayStats = $db->fetchOne(
-        "SELECT 
-            COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END), 0) as income,
-            COALESCE(SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END), 0) as expense,
-            COUNT(CASE WHEN transaction_type = 'income' THEN 1 END) as income_count,
-            COUNT(CASE WHEN transaction_type = 'expense' THEN 1 END) as expense_count
-         FROM cash_book 
-         WHERE $whereToday",
-        $paramsToday
-    );
-    
-    if ($todayStats) {
-        $todayIncome = (float)$todayStats['income'];
-        $todayExpense = (float)$todayStats['expense'];
-        $todayIncomeCount = (int)$todayStats['income_count'];
-        $todayExpenseCount = (int)$todayStats['expense_count'];
-    }
-    
-    // THIS MONTH STATS
-    $monthStats = $db->fetchOne(
-        "SELECT 
-            COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END), 0) as income,
-            COALESCE(SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END), 0) as expense
-         FROM cash_book 
-         WHERE $whereMonth",
-        $paramsMonth
-    );
-    
-    if ($monthStats) {
-        $monthIncome = (float)$monthStats['income'];
-        $monthExpense = (float)$monthStats['expense'];
-    }
-    
-    // LAST MONTH STATS
-    $lastMonthStats = $db->fetchOne(
-        "SELECT 
-            COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END), 0) as income,
-            COALESCE(SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END), 0) as expense
-         FROM cash_book 
-         WHERE $whereMonth",
-        $paramsLastMonth
-    );
-    
+    // Initialize variables
+    $todayIncome = 0;
+    $todayExpense = 0;
+    $todayIncomeCount = 0;
+    $todayExpenseCount = 0;
+    $monthIncome = 0;
+    $monthExpense = 0;
     $lastMonthIncome = 0;
     $lastMonthExpense = 0;
-    if ($lastMonthStats) {
-        $lastMonthIncome = (float)$lastMonthStats['income'];
-        $lastMonthExpense = (float)$lastMonthStats['expense'];
+    
+    // Loop through each business database and aggregate
+    foreach ($businesses as $business) {
+        try {
+            $bizPdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . $business['database_name'] . ";charset=utf8mb4", DB_USER, DB_PASS);
+            $bizPdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            
+            // TODAY STATS
+            $stmt = $bizPdo->prepare(
+                "SELECT 
+                    COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END), 0) as income,
+                    COALESCE(SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END), 0) as expense,
+                    COUNT(CASE WHEN transaction_type = 'income' THEN 1 END) as income_count,
+                    COUNT(CASE WHEN transaction_type = 'expense' THEN 1 END) as expense_count
+                 FROM cash_book 
+                 WHERE transaction_date = ?"
+            );
+            $stmt->execute([$today]);
+            $todayStats = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($todayStats) {
+                $todayIncome += (float)$todayStats['income'];
+                $todayExpense += (float)$todayStats['expense'];
+                $todayIncomeCount += (int)$todayStats['income_count'];
+                $todayExpenseCount += (int)$todayStats['expense_count'];
+            }
+            
+            // THIS MONTH STATS
+            $stmt = $bizPdo->prepare(
+                "SELECT 
+                    COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END), 0) as income,
+                    COALESCE(SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END), 0) as expense
+                 FROM cash_book 
+                 WHERE DATE_FORMAT(transaction_date, '%Y-%m') = ?"
+            );
+            $stmt->execute([$thisMonth]);
+            $monthStats = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($monthStats) {
+                $monthIncome += (float)$monthStats['income'];
+                $monthExpense += (float)$monthStats['expense'];
+            }
+            
+            // LAST MONTH STATS
+            $stmt = $bizPdo->prepare(
+                "SELECT 
+                    COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END), 0) as income,
+                    COALESCE(SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END), 0) as expense
+                 FROM cash_book 
+                 WHERE DATE_FORMAT(transaction_date, '%Y-%m') = ?"
+            );
+            $stmt->execute([$lastMonth]);
+            $lastMonthStats = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($lastMonthStats) {
+                $lastMonthIncome += (float)$lastMonthStats['income'];
+                $lastMonthExpense += (float)$lastMonthStats['expense'];
+            }
+        } catch (Exception $e) {
+            // Skip this business if database doesn't exist or table missing
+            continue;
+        }
     }
     
     // Calculate change percentages
@@ -155,7 +148,6 @@ try {
             'income_change' => round($incomeChange, 1),
             'expense_change' => round($expenseChange, 1)
         ],
-        'businesses_count' => count($accessibleBusinessIds),
         'timestamp' => date('Y-m-d H:i:s')
     ]);
     

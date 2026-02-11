@@ -1,7 +1,7 @@
 <?php
 /**
  * API: Owner Comparison
- * Get comparison data between all accessible businesses
+ * Get comparison data between all businesses
  */
 error_reporting(0);
 ini_set('display_errors', 0);
@@ -20,8 +20,8 @@ if (!$auth->isLoggedIn()) {
 
 $currentUser = $auth->getCurrentUser();
 
-// Check if user is owner or admin
-if ($currentUser['role'] !== 'owner' && $currentUser['role'] !== 'admin') {
+// Check if user is owner, admin, manager, or developer
+if (!in_array($currentUser['role'], ['owner', 'admin', 'manager', 'developer'])) {
     echo json_encode(['success' => false, 'message' => 'Access denied']);
     exit;
 }
@@ -29,35 +29,11 @@ if ($currentUser['role'] !== 'owner' && $currentUser['role'] !== 'admin') {
 $period = isset($_GET['period']) ? $_GET['period'] : 'today'; // today, this_month, this_year
 
 try {
-    $db = Database::getInstance();
-    
-    // Get user's business_access
-    $businessAccess = $currentUser['business_access'] ?? null;
-    
-    if (!$businessAccess || $businessAccess === 'null') {
-        $user = $db->fetchOne(
-            "SELECT business_access FROM users WHERE id = ?",
-            [$currentUser['id']]
-        );
-        $businessAccess = $user['business_access'] ?? '[]';
-    }
-    
-    $accessibleBusinessIds = json_decode($businessAccess, true);
-    if (!is_array($accessibleBusinessIds) || empty($accessibleBusinessIds)) {
-        echo json_encode([
-            'success' => true,
-            'businesses' => [],
-            'period' => $period
-        ]);
-        exit;
-    }
-    
-    // Get businesses info
-    $placeholders = implode(',', array_fill(0, count($accessibleBusinessIds), '?'));
-    $businesses = $db->fetchAll(
-        "SELECT id, business_name FROM businesses WHERE id IN ($placeholders)",
-        $accessibleBusinessIds
-    );
+    // Get businesses from main adf_system DB using direct PDO
+    $mainPdo = new PDO("mysql:host=" . DB_HOST . ";dbname=adf_system;charset=utf8mb4", DB_USER, DB_PASS);
+    $mainPdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $stmt = $mainPdo->query("SELECT id, business_name, database_name FROM businesses WHERE is_active = 1 ORDER BY id");
+    $businesses = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Build date filter based on period
     $dateFilter = "";
@@ -75,55 +51,46 @@ try {
             $dateFilter = "transaction_date = CURDATE()";
     }
     
-    // Get stats for each business
+    // Get stats from each business database
     $businessStats = [];
-    $hasBranchId = false;
-    
-    // Check once if branch_id column exists
-    try {
-        $columns = $db->getConnection()->query("SHOW COLUMNS FROM cash_book LIKE 'branch_id'")->fetchAll();
-        $hasBranchId = count($columns) > 0;
-    } catch (Exception $e) {
-        $hasBranchId = false;
-    }
     
     foreach ($businesses as $business) {
-        if ($hasBranchId) {
-            // Use branch_id if exists
-            $stats = $db->fetchOne(
+        try {
+            $bizPdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . $business['database_name'] . ";charset=utf8mb4", DB_USER, DB_PASS);
+            $bizPdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            
+            $stmt = $bizPdo->query(
                 "SELECT 
                     COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END), 0) as income,
                     COALESCE(SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END), 0) as expense,
                     COUNT(CASE WHEN transaction_type = 'income' THEN 1 END) as income_count,
                     COUNT(CASE WHEN transaction_type = 'expense' THEN 1 END) as expense_count
                  FROM cash_book 
-                 WHERE branch_id = ? AND $dateFilter",
-                [$business['id']]
+                 WHERE $dateFilter"
             );
-        } else {
-            // Fallback: get all data (same for all businesses if branch_id doesn't exist)
-            // This will show same data for all until migration is run
-            $stats = $db->fetchOne(
-                "SELECT 
-                    COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END), 0) as income,
-                    COALESCE(SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END), 0) as expense,
-                    COUNT(CASE WHEN transaction_type = 'income' THEN 1 END) as income_count,
-                    COUNT(CASE WHEN transaction_type = 'expense' THEN 1 END) as expense_count
-                 FROM cash_book 
-                 WHERE $dateFilter",
-                []
-            );
+            $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $businessStats[] = [
+                'id' => $business['id'],
+                'name' => $business['business_name'],
+                'income' => (float)($stats['income'] ?? 0),
+                'expense' => (float)($stats['expense'] ?? 0),
+                'net' => (float)($stats['income'] ?? 0) - (float)($stats['expense'] ?? 0),
+                'income_count' => (int)($stats['income_count'] ?? 0),
+                'expense_count' => (int)($stats['expense_count'] ?? 0)
+            ];
+        } catch (Exception $e) {
+            // If database doesn't exist or cash_book table missing, show 0 data
+            $businessStats[] = [
+                'id' => $business['id'],
+                'name' => $business['business_name'],
+                'income' => 0,
+                'expense' => 0,
+                'net' => 0,
+                'income_count' => 0,
+                'expense_count' => 0
+            ];
         }
-        
-        $businessStats[] = [
-            'id' => $business['id'],
-            'name' => $business['business_name'],
-            'income' => (float)($stats['income'] ?? 0),
-            'expense' => (float)($stats['expense'] ?? 0),
-            'net' => (float)($stats['income'] ?? 0) - (float)($stats['expense'] ?? 0),
-            'income_count' => (int)($stats['income_count'] ?? 0),
-            'expense_count' => (int)($stats['expense_count'] ?? 0)
-        ];
     }
     
     // Calculate totals
@@ -139,7 +106,6 @@ try {
             'expense' => $totalExpense,
             'net' => $totalIncome - $totalExpense
         ],
-        'has_branch_id' => $hasBranchId,
         'timestamp' => date('Y-m-d H:i:s')
     ]);
     

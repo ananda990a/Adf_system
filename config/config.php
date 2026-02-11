@@ -88,20 +88,20 @@ ini_set('display_errors', 1);
 // ============================================
 // CURRENCY FORMAT
 // ============================================
-define('CURRENCY_SYMBOL', 'Rp');
-define('CURRENCY_DECIMAL', 0);
+if (!defined('CURRENCY_SYMBOL')) define('CURRENCY_SYMBOL', 'Rp');
+if (!defined('CURRENCY_DECIMAL')) define('CURRENCY_DECIMAL', 0);
 
 // ============================================
 // PAGINATION
 // ============================================
-define('RECORDS_PER_PAGE', 25);
+if (!defined('RECORDS_PER_PAGE')) define('RECORDS_PER_PAGE', 25);
 
 // ============================================
 // DATE FORMAT
 // ============================================
-define('DATE_FORMAT', 'd/m/Y');
-define('DATETIME_FORMAT', 'd/m/Y H:i');
-define('TIME_FORMAT', 'H:i');
+if (!defined('DATE_FORMAT')) define('DATE_FORMAT', 'd/m/Y');
+if (!defined('DATETIME_FORMAT')) define('DATETIME_FORMAT', 'd/m/Y H:i');
+if (!defined('TIME_FORMAT')) define('TIME_FORMAT', 'H:i');
 
 // ============================================
 // MULTI-BUSINESS CONFIGURATION

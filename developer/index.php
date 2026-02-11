@@ -1283,4 +1283,72 @@ require_once __DIR__ . '/includes/header.php';
     <?php endif; ?>
 </div>
 
+<!-- User Modal for Add User -->
+<div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userModalLabel">Add New User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Username <span class="text-danger">*</span></label>
+                        <input type="text" name="username" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email <span class="text-danger">*</span></label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" name="full_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role <span class="text-danger">*</span></label>
+                        <select name="role_id" class="form-select" required>
+                            <option value="">Select Role</option>
+                            <?php foreach ($roles as $role): ?>
+                            <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['role_name']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="password" name="password" id="modalPassword" class="form-control" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="toggleModalPassword()">
+                                <i class="bi bi-eye" id="modalPasswordIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="action" value="save_user" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>Create User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleModalPassword() {
+    const input = document.getElementById('modalPassword');
+    const icon = document.getElementById('modalPasswordIcon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    }
+}
+</script>
+
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

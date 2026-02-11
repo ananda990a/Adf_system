@@ -20,13 +20,14 @@ if (!$auth->isLoggedIn()) {
 
 $currentUser = $auth->getCurrentUser();
 
-// Check if user is owner or admin
-if ($currentUser['role'] !== 'owner' && $currentUser['role'] !== 'admin') {
+// Check if user is owner, admin, manager, or developer
+if (!in_array($currentUser['role'], ['owner', 'admin', 'manager', 'developer'])) {
     echo json_encode(['success' => false, 'message' => 'Access denied']);
     exit;
 }
 
-$db = Database::getInstance();
+// Switch to hotel database
+$db = Database::switchDatabase('adf_narayana_hotel');
 $branchId = isset($_GET['branch_id']) ? (int)$_GET['branch_id'] : null;
 
 try {

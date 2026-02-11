@@ -21,56 +21,31 @@ if (!$auth->isLoggedIn()) {
 
 $currentUser = $auth->getCurrentUser();
 
-// Check if user is owner or admin
-if ($currentUser['role'] !== 'owner' && $currentUser['role'] !== 'admin') {
+// Check if user is owner, admin, manager, or developer
+if (!in_array($currentUser['role'], ['owner', 'admin', 'manager', 'developer'])) {
     echo json_encode(['success' => false, 'message' => 'Access denied']);
     exit;
 }
 
 try {
-    // FORCE connection to adf_narayana (businesses table is there, not in business-specific DBs)
-    $db = Database::switchDatabase('adf_narayana');
-    
-    // DEBUG: Check which database we're connected to
-    $currentDb = $db->fetchOne("SELECT DATABASE() as db_name");
-    error_log("Owner Branches - Connected to: " . $currentDb['db_name']);
-    
-    // Get user's business_access
-    $businessAccess = $currentUser['business_access'] ?? null;
-    
-    if (!$businessAccess || $businessAccess === 'null') {
-        // Jika tidak ada business_access, ambil dari database
-        $user = $db->fetchOne(
-            "SELECT business_access FROM users WHERE id = ?",
-            [$currentUser['id']]
-        );
-        $businessAccess = $user['business_access'] ?? '[]';
-    }
-    
-    // Decode JSON
-    $accessibleBusinessIds = json_decode($businessAccess, true);
-    
-    if (!is_array($accessibleBusinessIds)) {
-        $accessibleBusinessIds = [];
-    }
+    // Force connection to adf_system database where businesses table is located
+    $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=adf_system;charset=utf8mb4", DB_USER, DB_PASS);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
     // Get all businesses from database
-    $allBusinesses = $db->fetchAll("SELECT id, business_name, address, phone FROM businesses ORDER BY id");
-    error_log("Owner Branches - Businesses found: " . count($allBusinesses));
-    error_log("Owner Branches - Query result: " . json_encode($allBusinesses));
+    $stmt = $pdo->query("SELECT id, business_name, address, phone FROM businesses ORDER BY id");
+    $allBusinesses = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     $branches = [];
     
+    // Admin, owner, developer, manager have access to ALL businesses
     foreach ($allBusinesses as $business) {
-        // Filter: hanya tampilkan bisnis yang user punya akses
-        if (in_array($business['id'], $accessibleBusinessIds)) {
-            $branches[] = [
-                'id' => $business['id'],
-                'branch_name' => $business['business_name'],
-                'city' => $business['address'] ?? '-',
-                'phone' => $business['phone'] ?? '-'
-            ];
-        }
+        $branches[] = [
+            'id' => $business['id'],
+            'branch_name' => $business['business_name'],
+            'city' => $business['address'] ?? '-',
+            'phone' => $business['phone'] ?? '-'
+        ];
     }
     
     echo json_encode([
@@ -80,8 +55,7 @@ try {
         'user_info' => [
             'username' => $currentUser['username'],
             'role' => $currentUser['role'],
-            'total_businesses' => count($allBusinesses),
-            'accessible_businesses' => count($branches)
+            'total_businesses' => count($allBusinesses)
         ]
     ]);
     
