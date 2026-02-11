@@ -10,8 +10,8 @@ if (!ob_get_level()) {
 }
 
 // Session configuration BEFORE any requires
-define('SESSION_NAME', 'NARAYANA_SESSION');
-define('SESSION_LIFETIME', 3600 * 8);
+if (!defined('SESSION_NAME')) define('SESSION_NAME', 'NARAYANA_SESSION');
+if (!defined('SESSION_LIFETIME')) define('SESSION_LIFETIME', 3600 * 8);
 
 // Initialize session BEFORE anything else
 if (session_status() === PHP_SESSION_NONE) {
@@ -25,11 +25,11 @@ defined('APP_ACCESS') or define('APP_ACCESS', true);
 // ============================================
 // APPLICATION SETTINGS
 // ============================================
-define('APP_NAME', 'ADF System - Multi-Business Management');
-define('APP_VERSION', '2.0.0');
-define('APP_YEAR', '2026');
-define('DEVELOPER_NAME', 'Ariefsystemdesign.net');
-define('DEVELOPER_LOGO', 'assets/img/developer-logo.png');
+if (!defined('APP_NAME')) define('APP_NAME', 'ADF System - Multi-Business Management');
+if (!defined('APP_VERSION')) define('APP_VERSION', '2.0.0');
+if (!defined('APP_YEAR')) define('APP_YEAR', '2026');
+if (!defined('DEVELOPER_NAME')) define('DEVELOPER_NAME', 'Ariefsystemdesign.net');
+if (!defined('DEVELOPER_LOGO')) define('DEVELOPER_LOGO', 'assets/img/developer-logo.png');
 
 // ============================================
 // DATABASE CONFIGURATION
@@ -40,23 +40,23 @@ $isProduction = (strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') === false &&
 
 if ($isProduction) {
     // Production (Hosting) - uses adf_system database prefixed
-    define('DB_HOST', 'localhost');
-    define('DB_NAME', 'adfb2574_adf');
-    define('DB_USER', 'adfb2574_adfsystem');
-    define('DB_PASS', '@Nnoc2025');
+    if (!defined('DB_HOST')) define('DB_HOST', 'localhost');
+    if (!defined('DB_NAME')) define('DB_NAME', 'adfb2574_adf');
+    if (!defined('DB_USER')) define('DB_USER', 'adfb2574_adfsystem');
+    if (!defined('DB_PASS')) define('DB_PASS', '@Nnoc2025');
 } else {
     // Local development - uses adf_system as master database
-    define('DB_HOST', 'localhost');
-    define('DB_NAME', 'adf_system');
-    define('DB_USER', 'root');
-    define('DB_PASS', '');
+    if (!defined('DB_HOST')) define('DB_HOST', 'localhost');
+    if (!defined('DB_NAME')) define('DB_NAME', 'adf_system');
+    if (!defined('DB_USER')) define('DB_USER', 'root');
+    if (!defined('DB_PASS')) define('DB_PASS', '');
 }
-define('DB_CHARSET', 'utf8mb4');
+if (!defined('DB_CHARSET')) define('DB_CHARSET', 'utf8mb4');
 
 // ============================================
 // PATH CONFIGURATION
 // ============================================
-define('BASE_PATH', dirname(dirname(__FILE__)));
+if (!defined('BASE_PATH')) define('BASE_PATH', dirname(dirname(__FILE__)));
 
 // Handle both web and CLI environment
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
@@ -65,11 +65,13 @@ $portSuffix = ($port != '80' && $port != '443') ? ':' . $port : '';
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 
 // Only define BASE_URL in web environment
-if (php_sapi_name() !== 'cli') {
-    define('BASE_URL', $protocol . '://' . $host . '/adf_system');
-} else {
-    // For CLI, just use a placeholder
-    define('BASE_URL', 'http://localhost/adf_system');
+if (!defined('BASE_URL')) {
+    if (php_sapi_name() !== 'cli') {
+        define('BASE_URL', $protocol . '://' . $host . '/adf_system');
+    } else {
+        // For CLI, just use a placeholder
+        define('BASE_URL', 'http://localhost/adf_system');
+    }
 }
 
 // ============================================

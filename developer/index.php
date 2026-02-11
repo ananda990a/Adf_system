@@ -673,22 +673,22 @@ require_once __DIR__ . '/includes/header.php';
                         <form method="POST">
                             <input type="hidden" name="user_id" value="<?php echo $editUser['id']; ?>">
                             
-                            <div class="row g-2">
-                                <div class="col-md-3">
-                                    <label class="form-label form-label-sm">Username *</label>
-                                    <input type="text" name="username" class="form-control form-control-sm" value="<?php echo htmlspecialchars($editUser['username']); ?>" required>
+                            <div class="row g-3">
+                                <div class="col-md-6 col-lg-3">
+                                    <label class="form-label">Username <span class="text-danger">*</span></label>
+                                    <input type="text" name="username" class="form-control" value="<?php echo htmlspecialchars($editUser['username']); ?>" required>
                                 </div>
-                                <div class="col-md-3">
-                                    <label class="form-label form-label-sm">Email *</label>
-                                    <input type="email" name="email" class="form-control form-control-sm" value="<?php echo htmlspecialchars($editUser['email']); ?>" required>
+                                <div class="col-md-6 col-lg-3">
+                                    <label class="form-label">Email <span class="text-danger">*</span></label>
+                                    <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($editUser['email']); ?>" required>
                                 </div>
-                                <div class="col-md-3">
-                                    <label class="form-label form-label-sm">Full Name *</label>
-                                    <input type="text" name="full_name" class="form-control form-control-sm" value="<?php echo htmlspecialchars($editUser['full_name']); ?>" required>
+                                <div class="col-md-6 col-lg-3">
+                                    <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                                    <input type="text" name="full_name" class="form-control" value="<?php echo htmlspecialchars($editUser['full_name']); ?>" required>
                                 </div>
-                                <div class="col-md-3">
-                                    <label class="form-label form-label-sm">Role *</label>
-                                    <select name="role_id" class="form-select form-select-sm" required>
+                                <div class="col-md-6 col-lg-3">
+                                    <label class="form-label">Role <span class="text-danger">*</span></label>
+                                    <select name="role_id" class="form-select" required>
                                         <option value="">Select Role</option>
                                         <?php foreach ($roles as $role): ?>
                                         <option value="<?php echo $role['id']; ?>" <?php echo $editUser['role_id'] == $role['id'] ? 'selected' : ''; ?>>
@@ -699,21 +699,26 @@ require_once __DIR__ . '/includes/header.php';
                                 </div>
                             </div>
                             
-                            <div class="row g-2 mt-1">
-                                <div class="col-md-6">
-                                    <label class="form-label form-label-sm">Password <small class="text-muted">(leave blank to keep)</small></label>
-                                    <input type="password" name="password" class="form-control form-control-sm">
+                            <div class="row g-2 mt-2">
+                                <div class="col-md-4">
+                                    <label class="form-label form-label-sm">Password <small class="text-muted">(kosongkan jika tidak ingin mengubah)</small></label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="password" name="password" id="editPassword" class="form-control form-control-sm" placeholder="••••••••">
+                                        <button class="btn btn-outline-secondary" type="button" id="toggleEditPassword" title="Tampilkan/Sembunyikan Password">
+                                            <i class="bi bi-eye" id="editPasswordIcon"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             
                             <div class="d-flex gap-2 mt-3">
-                                <button type="submit" name="action" value="save_user" class="btn btn-sm btn-primary">
-                                    <i class="bi bi-check me-1"></i>Update User
+                                <button type="submit" name="action" value="save_user" class="btn btn-primary">
+                                    <i class="bi bi-check-lg me-1"></i>Update User
                                 </button>
-                                <button type="submit" name="action" value="delete_user" class="btn btn-sm btn-danger" onclick="return confirm('Hapus user ini?')">
+                                <button type="submit" name="action" value="delete_user" class="btn btn-danger" onclick="return confirm('Apakah Anda yakin ingin menghapus user ini?')">
                                     <i class="bi bi-trash me-1"></i>Delete
                                 </button>
-                                <a href="?section=user-setup&step=users" class="btn btn-sm btn-outline-secondary">Cancel</a>
+                                <a href="?section=user-setup&step=users" class="btn btn-outline-secondary">Cancel</a>
                             </div>
                         </form>
                     </div>
@@ -1254,6 +1259,25 @@ require_once __DIR__ . '/includes/header.php';
             }
         });
     });
+    
+    // Toggle password visibility
+    const toggleEditPassword = document.getElementById('toggleEditPassword');
+    const editPassword = document.getElementById('editPassword');
+    const editPasswordIcon = document.getElementById('editPasswordIcon');
+    
+    if (toggleEditPassword && editPassword) {
+        toggleEditPassword.addEventListener('click', function() {
+            if (editPassword.type === 'password') {
+                editPassword.type = 'text';
+                editPasswordIcon.classList.remove('bi-eye');
+                editPasswordIcon.classList.add('bi-eye-slash');
+            } else {
+                editPassword.type = 'password';
+                editPasswordIcon.classList.remove('bi-eye-slash');
+                editPasswordIcon.classList.add('bi-eye');
+            }
+        });
+    }
     </script>
     
     <?php endif; ?>

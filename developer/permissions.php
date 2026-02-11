@@ -105,18 +105,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Add new permissions with granular control
                 $permStmt = $pdo->prepare("
-                    INSERT INTO user_menu_permissions (user_id, business_id, menu_id, can_view, can_create, can_edit, can_delete) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO user_menu_permissions (user_id, business_id, menu_id, menu_code, can_view, can_create, can_edit, can_delete) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ");
+                
+                // Get menu_code mapping
+                $menuCodes = [];
+                $menuQuery = $pdo->query("SELECT id, menu_code FROM menu_items");
+                while ($row = $menuQuery->fetch(PDO::FETCH_ASSOC)) {
+                    $menuCodes[$row['id']] = $row['menu_code'];
+                }
                 
                 foreach ($permissions as $menuId => $perms) {
                     $canView = isset($perms['view']) ? 1 : 0;
                     $canCreate = isset($perms['create']) ? 1 : 0;
                     $canEdit = isset($perms['edit']) ? 1 : 0;
                     $canDelete = isset($perms['delete']) ? 1 : 0;
+                    $menuCode = $menuCodes[$menuId] ?? '';
                     
                     if ($canView || $canCreate || $canEdit || $canDelete) {
-                        $permStmt->execute([$permUserId, $permBusinessId, $menuId, $canView, $canCreate, $canEdit, $canDelete]);
+                        $permStmt->execute([$permUserId, $permBusinessId, $menuId, $menuCode, $canView, $canCreate, $canEdit, $canDelete]);
                     }
                 }
                 

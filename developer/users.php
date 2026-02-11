@@ -264,8 +264,13 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                     <div class="col-md-6">
                         <label class="form-label form-label-sm">Password <?php echo $action === 'add' ? '<span class="text-danger">*</span>' : ''; ?></label>
-                        <input type="password" class="form-control form-control-sm" name="password" <?php echo $action === 'add' ? 'required' : ''; ?>
-                               placeholder="<?php echo $action === 'add' ? 'Required' : 'Leave blank to keep'; ?>">
+                        <div class="input-group input-group-sm">
+                            <input type="password" class="form-control form-control-sm" name="password" id="userPassword" <?php echo $action === 'add' ? 'required' : ''; ?>
+                                   placeholder="<?php echo $action === 'add' ? 'Required' : 'Kosongkan jika tidak ingin mengubah'; ?>">
+                            <button class="btn btn-outline-secondary" type="button" id="toggleUserPassword" title="Tampilkan/Sembunyikan Password">
+                                <i class="bi bi-eye" id="userPasswordIcon"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -431,5 +436,28 @@ require_once __DIR__ . '/includes/header.php';
         }
     }
 </style>
+
+<script>
+// Toggle password visibility
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleUserPassword = document.getElementById('toggleUserPassword');
+    const userPassword = document.getElementById('userPassword');
+    const userPasswordIcon = document.getElementById('userPasswordIcon');
+    
+    if (toggleUserPassword && userPassword) {
+        toggleUserPassword.addEventListener('click', function() {
+            if (userPassword.type === 'password') {
+                userPassword.type = 'text';
+                userPasswordIcon.classList.remove('bi-eye');
+                userPasswordIcon.classList.add('bi-eye-slash');
+            } else {
+                userPassword.type = 'password';
+                userPasswordIcon.classList.remove('bi-eye-slash');
+                userPasswordIcon.classList.add('bi-eye');
+            }
+        });
+    }
+});
+</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

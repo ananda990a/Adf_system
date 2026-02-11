@@ -2640,7 +2640,8 @@ window.updateSourceDetails = function() {
             pmOtaBtn.style.display = 'none'; // Hide the button
         }
         // Switch back to Cash if OTA was selected
-        const currentPm = document.getElementById('paymentMethod').value;
+        const pmElement = document.getElementById('paymentMethod');
+        const currentPm = pmElement ? pmElement.value : '';
         if (currentPm === 'ota') {
              // Find cash button and click it
              const cashBtn = document.querySelector('.pm-item[onclick*="cash"]');
@@ -2980,39 +2981,53 @@ window.closeReservationModal = function closeReservationModal() {
     calculateTotalPax();
     
     // Reset price display
-    document.getElementById('totalPrice').textContent = 'Rp 0';
-    document.getElementById('discountAmount').textContent = '- Rp 0';
-    document.getElementById('finalPrice').textContent = 'Rp 0';
+    const totalPriceEl = document.getElementById('totalPrice');
+    const discountAmountEl = document.getElementById('discountAmount');
+    const finalPriceEl = document.getElementById('finalPrice');
+    if (totalPriceEl) totalPriceEl.textContent = 'Rp 0';
+    if (discountAmountEl) discountAmountEl.textContent = '- Rp 0';
+    if (finalPriceEl) finalPriceEl.textContent = 'Rp 0';
     
     selectedDate = null;
     selectedRoom = null;
 }
 
 window.calculateNights = function calculateNights() {
-    const checkIn = document.getElementById('checkInDate').value;
-    const checkOut = document.getElementById('checkOutDate').value;
+    const checkInEl = document.getElementById('checkInDate');
+    const checkOutEl = document.getElementById('checkOutDate');
+    const checkIn = checkInEl ? checkInEl.value : null;
+    const checkOut = checkOutEl ? checkOutEl.value : null;
     
     if (checkIn && checkOut) {
         const start = new Date(checkIn);
         const end = new Date(checkOut);
         const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
         
-        document.getElementById('totalNights').value = nights > 0 ? nights : 0;
+        const totalNightsEl = document.getElementById('totalNights');
+        if (totalNightsEl) totalNightsEl.value = nights > 0 ? nights : 0;
         calculatePrice();
     }
 }
 
 window.calculatePrice = function calculatePrice() {
-    const roomPrice = parseFloat(document.getElementById('roomPrice').value) || 0;
-    const nights = parseInt(document.getElementById('totalNights').value) || 0;
-    const discount = parseFloat(document.getElementById('discount').value) || 0;
+    const roomPriceEl = document.getElementById('roomPrice');
+    const totalNightsEl = document.getElementById('totalNights');
+    const discountEl = document.getElementById('discount');
+    
+    const roomPrice = parseFloat(roomPriceEl ? roomPriceEl.value : 0) || 0;
+    const nights = parseInt(totalNightsEl ? totalNightsEl.value : 0) || 0;
+    const discount = parseFloat(discountEl ? discountEl.value : 0) || 0;
     
     const total = roomPrice * nights;
     const final = total - discount;
     
-    document.getElementById('totalPrice').textContent = 'Rp ' + total.toLocaleString('id-ID');
-    document.getElementById('discountAmount').textContent = '- Rp ' + discount.toLocaleString('id-ID');
-    document.getElementById('finalPrice').textContent = 'Rp ' + final.toLocaleString('id-ID');
+    const totalPriceEl = document.getElementById('totalPrice');
+    const discountAmountEl = document.getElementById('discountAmount');
+    const finalPriceDisplayEl = document.getElementById('finalPrice');
+    
+    if (totalPriceEl) totalPriceEl.textContent = 'Rp ' + total.toLocaleString('id-ID');
+    if (discountAmountEl) discountAmountEl.textContent = '- Rp ' + discount.toLocaleString('id-ID');
+    if (finalPriceDisplayEl) finalPriceDisplayEl.textContent = 'Rp ' + final.toLocaleString('id-ID');
 
     // Run Calculate Final Price for the modernized form too
     if (typeof calculateFinalPrice === 'function') calculateFinalPrice();
@@ -3025,9 +3040,13 @@ window.calculatePrice = function calculatePrice() {
 }
 
 window.getFinalPriceNumber = function getFinalPriceNumber() {
-    const roomPrice = parseFloat(document.getElementById('roomPrice').value) || 0;
-    const nights = parseInt(document.getElementById('totalNights').value) || 0;
-    const discount = parseFloat(document.getElementById('discount').value) || 0;
+    const roomPriceEl = document.getElementById('roomPrice');
+    const totalNightsEl = document.getElementById('totalNights');
+    const discountEl = document.getElementById('discount');
+    
+    const roomPrice = parseFloat(roomPriceEl ? roomPriceEl.value : 0) || 0;
+    const nights = parseInt(totalNightsEl ? totalNightsEl.value : 0) || 0;
+    const discount = parseFloat(discountEl ? discountEl.value : 0) || 0;
     return (roomPrice * nights) - discount;
 }
 
@@ -3062,11 +3081,15 @@ window.updatePaymentStatusFromAmount = function updatePaymentStatusFromAmount() 
 
 // Calculate Total Pax (Adult + Children)
 window.calculateTotalPax = function calculateTotalPax() {
-    const adults = parseInt(document.getElementById('adultCount').value) || 0;
-    const children = parseInt(document.getElementById('childrenCount').value) || 0;
+    const adultEl = document.getElementById('adultCount');
+    const childrenEl = document.getElementById('childrenCount');
+    const totalPaxEl = document.getElementById('totalPax');
+    
+    const adults = parseInt(adultEl ? adultEl.value : 0) || 0;
+    const children = parseInt(childrenEl ? childrenEl.value : 0) || 0;
     const totalPax = adults + children;
     
-    document.getElementById('totalPax').value = totalPax;
+    if (totalPaxEl) totalPaxEl.value = totalPax;
 }
 
 // Old submitReservation removed to avoid duplication and syntax error
@@ -3266,8 +3289,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const selectedOption = this.options[this.selectedIndex];
                 const price = selectedOption.getAttribute('data-price');
                 if (price) {
-                    document.getElementById('roomPrice').value = price;
-                    calculatePrice();
+                    const roomPriceEl = document.getElementById('roomPrice');
+                    if (roomPriceEl) roomPriceEl.value = price;
+                    if (typeof calculatePrice === 'function') calculatePrice();
                 }
             });
         }
