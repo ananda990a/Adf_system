@@ -1,7 +1,7 @@
 <?php
 require_once dirname(dirname(__FILE__)) . '/config/config.php';
 require_once dirname(dirname(__FILE__)) . '/config/database.php';
-require_once dirname(dirname(__FILE__)) . '/developer/includes/dev-auth.php';
+require_once __DIR__ . '/includes/dev_auth.php';
 require_once dirname(dirname(__FILE__)) . '/includes/functions.php';
 
 $devAuth = new DevAuth();
