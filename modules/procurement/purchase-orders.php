@@ -75,6 +75,71 @@ include '../../includes/header.php';
         transform: translateY(0);
     }
 }
+
+/* Action Button Styles */
+.po-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.po-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.po-action-btn.view {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white !important;
+}
+
+.po-action-btn.submit {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white !important;
+}
+
+.po-action-btn.nota {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white !important;
+}
+
+.po-action-btn.reject {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white !important;
+}
+
+.po-action-btn.update {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: white !important;
+}
+
+.po-action-btn svg {
+    width: 16px;
+    height: 16px;
+    stroke: white !important;
+}
+
+.po-action-group {
+    display: flex;
+    gap: 0.35rem;
+    justify-content: center;
+    align-items: center;
+}
+
+.po-action-wide {
+    width: auto;
+    padding: 0.4rem 0.75rem;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
 </style>
 
 <div style="margin-bottom: 1.25rem;">
@@ -240,49 +305,45 @@ include '../../includes/header.php';
                                 Rp <?php echo number_format($po['total_amount'] ?? 0, 0, ',', '.'); ?>
                             </td>
                             <td style="font-size: 0.813rem;"><?php echo $po['created_by_name']; ?></td>
-                            <td class="text-center">
-                                <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                                    <a href="view-po.php?id=<?php echo $po['id']; ?>" class="btn btn-sm btn-primary" title="View">
-                                        <i data-feather="eye" style="width: 14px; height: 14px;"></i>
+                            <td>
+                                <div class="po-action-group">
+                                    <a href="view-po.php?id=<?php echo $po['id']; ?>" class="po-action-btn view" title="View">
+                                        <i data-feather="eye"></i>
                                     </a>
                                     
                                     <?php if ($po['status'] === 'draft'): ?>
                                         <form method="POST" action="submit-po.php" style="display: inline;">
                                             <input type="hidden" name="po_id" value="<?php echo $po['id']; ?>">
-                                            <button type="submit" class="btn btn-sm btn-success" title="Submit PO" onclick="return confirm('Submit PO ini?')">
-                                                <i data-feather="send" style="width: 14px; height: 14px;"></i>
+                                            <button type="submit" class="po-action-btn submit" title="Submit PO" onclick="return confirm('Submit PO ini?')">
+                                                <i data-feather="send"></i>
                                             </button>
                                         </form>
                                     <?php elseif ($po['status'] === 'submitted'): ?>
                                         <?php if (!empty($po['payment_id'])): ?>
-                                             <!-- Logic: Paid but Status Stuck -->
                                              <form method="POST" action="approve-purchase.php" style="display:inline;">
                                                 <input type="hidden" name="approve" value="1">
                                                 <input type="hidden" name="po_id" value="<?php echo $po['id']; ?>">
-                                                <button type="submit" class="btn btn-sm" title="Perbarui Status (Sudah Dibayar)" style="background: #8b5cf6; color: white; border: none;">
-                                                    <i data-feather="refresh-cw" style="width: 14px; height: 14px;"></i> Update
+                                                <button type="submit" class="po-action-btn po-action-wide update" title="Update Status">
+                                                    <i data-feather="refresh-cw"></i> Update
                                                 </button>
                                              </form>
                                         <?php else: ?>
-                                            <button type="button" class="btn btn-sm" title="Approve & Bayar" onclick="openApproveDialog(<?php echo $po['id']; ?>, '<?php echo $po['po_number']; ?>', <?php echo $po['total_amount']; ?>)" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; font-weight: 600; border: none; box-shadow: 0 2px 6px rgba(16,185,129,0.3);">
-                                                <i data-feather="check-circle" style="width: 14px; height: 14px;"></i>
-                                                <span style="margin-left: 0.25rem; font-size: 0.75rem;">Bayar</span>
+                                            <button type="button" class="po-action-btn po-action-wide submit" title="Approve & Bayar" onclick="openApproveDialog(<?php echo $po['id']; ?>, '<?php echo $po['po_number']; ?>', <?php echo $po['total_amount']; ?>)">
+                                                <i data-feather="check-circle"></i> Bayar
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-danger" title="Reject & Hapus PO" onclick="rejectPO(<?php echo $po['id']; ?>, '<?php echo $po['po_number']; ?>')">
-                                                <i data-feather="x-circle" style="width: 14px; height: 14px;"></i>
-                                                <span style="margin-left: 0.25rem; font-size: 0.75rem;">Reject</span>
+                                            <button type="button" class="po-action-btn po-action-wide reject" title="Reject PO" onclick="rejectPO(<?php echo $po['id']; ?>, '<?php echo $po['po_number']; ?>')">
+                                                <i data-feather="x-circle"></i> Reject
                                             </button>
                                         <?php endif; ?>
                                     <?php elseif ($po['status'] === 'completed'): ?>
                                         <?php 
-                                        // Prioritize attachment column if exists, then new table, then fallback
                                         $attPath = isset($po['attachment_path']) ? $po['attachment_path'] : '';
                                         if (empty($attPath) && isset($po['ta_attachment_path'])) $attPath = $po['ta_attachment_path'];
                                         if (empty($attPath) && isset($po['file_path'])) $attPath = $po['file_path'];
                                         ?>
                                         <?php if (!empty($attPath)): ?>
-                                            <a href="<?php echo BASE_URL . '/' . $attPath; ?>" target="_blank" class="btn btn-sm btn-info" title="Lihat Nota">
-                                                <i data-feather="file-text" style="width: 14px; height: 14px;"></i>
+                                            <a href="<?php echo BASE_URL . '/' . $attPath; ?>" target="_blank" class="po-action-btn nota" title="Lihat Nota">
+                                                <i data-feather="file-text"></i>
                                             </a>
                                         <?php endif; ?>
                                     <?php endif; ?>
