@@ -1,7 +1,7 @@
 <?php
 /**
  * Developer Panel - Audit Logs
- * View system activity logs
+ * View system activity logs with active users
  */
 
 define('APP_ACCESS', true);
@@ -23,10 +23,40 @@ $page = max(1, (int)($_GET['page'] ?? 1));
 $perPage = 50;
 $offset = ($page - 1) * $perPage;
 
+// Get active users (logged in within last 30 minutes)
+$activeUsers = [];
+try {
+    $activeUsers = $pdo->query("
+        SELECT u.id, u.username, u.full_name, u.email, r.role_name, u.last_login,
+               (SELECT MAX(created_at) FROM audit_logs WHERE user_id = u.id) as last_activity
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE u.last_login IS NOT NULL 
+        AND u.last_login >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+        AND u.is_active = 1
+        ORDER BY u.last_login DESC
+    ")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    // Fallback: just get recently active users from audit_logs
+    try {
+        $activeUsers = $pdo->query("
+            SELECT DISTINCT u.id, u.username, u.full_name, u.email, r.role_name,
+                   u.last_login, MAX(a.created_at) as last_activity
+            FROM audit_logs a
+            JOIN users u ON a.user_id = u.id
+            LEFT JOIN roles r ON u.role_id = r.id
+            WHERE a.created_at >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+            GROUP BY u.id
+            ORDER BY last_activity DESC
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e2) {}
+}
+
 // Get unique actions for filter
 $actions = [];
 try {
-    $actions = $pdo->query("SELECT DISTINCT action_type FROM audit_logs ORDER BY action_type")->fetchAll(PDO::FETCH_COLUMN);
+    $stmt = $pdo->query("SELECT DISTINCT action_type FROM audit_logs WHERE action_type IS NOT NULL AND action_type != '' ORDER BY action_type");
+    $actions = $stmt->fetchAll(PDO::FETCH_COLUMN);
 } catch (Exception $e) {}
 
 // Get users for filter
@@ -102,21 +132,134 @@ require_once __DIR__ . '/includes/header.php';
 .log-action.delete { background: rgba(220, 53, 69, 0.2); color: #f87171; }
 .log-action.login { background: rgba(111, 66, 193, 0.2); color: #a78bfa; }
 .log-action.logout { background: rgba(108, 117, 125, 0.2); color: #9ca3af; }
+.log-action.default { background: rgba(108, 117, 125, 0.2); color: #9ca3af; }
+
+.active-user-card {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(59, 130, 246, 0.1));
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+    transition: all 0.3s;
+}
+.active-user-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.2);
+}
+.active-user-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981, #3b82f6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    color: white;
+    margin: 0 auto 10px;
+}
+.online-indicator {
+    width: 12px;
+    height: 12px;
+    background: #10b981;
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulse 2s infinite;
+    margin-right: 5px;
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+.stat-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+}
+.stat-card .number {
+    font-size: 28px;
+    font-weight: 700;
+    color: #00d4ff;
+}
+.stat-card .label {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 5px;
+}
 </style>
 
 <div class="container-fluid py-4">
+    <!-- Header -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <h4 class="mb-0"><i class="bi bi-journal-text me-2"></i>Audit Logs</h4>
-                <span class="badge bg-primary"><?php echo number_format($totalLogs); ?> records</span>
+                <h4 class="mb-0"><i class="bi bi-journal-text me-2"></i>Audit Logs & Active Users</h4>
+                <div>
+                    <span class="badge bg-success me-2"><span class="online-indicator"></span><?php echo count($activeUsers); ?> Online</span>
+                    <span class="badge bg-primary"><?php echo number_format($totalLogs); ?> records</span>
+                </div>
             </div>
         </div>
     </div>
     
+    <!-- Active Users Section -->
+    <?php if (!empty($activeUsers)): ?>
+    <div class="content-card mb-4">
+        <div class="p-3">
+            <h6 class="mb-3"><i class="bi bi-people-fill me-2 text-success"></i>Users Online (Last 30 Minutes)</h6>
+            <div class="row g-3">
+                <?php foreach ($activeUsers as $activeUser): ?>
+                <div class="col-md-3 col-sm-6">
+                    <div class="active-user-card">
+                        <div class="active-user-avatar">
+                            <?php echo strtoupper(substr($activeUser['full_name'] ?? $activeUser['username'], 0, 1)); ?>
+                        </div>
+                        <div class="fw-bold"><?php echo htmlspecialchars($activeUser['full_name'] ?? $activeUser['username']); ?></div>
+                        <small class="text-muted">@<?php echo htmlspecialchars($activeUser['username']); ?></small>
+                        <div class="mt-2">
+                            <span class="badge bg-primary"><?php echo htmlspecialchars($activeUser['role_name'] ?? 'User'); ?></span>
+                        </div>
+                        <div class="mt-2 small text-muted">
+                            <i class="bi bi-clock me-1"></i>
+                            <?php 
+                            $lastTime = $activeUser['last_activity'] ?? $activeUser['last_login'];
+                            if ($lastTime) {
+                                $diff = time() - strtotime($lastTime);
+                                if ($diff < 60) echo 'Just now';
+                                elseif ($diff < 3600) echo floor($diff/60) . ' min ago';
+                                else echo date('H:i', strtotime($lastTime));
+                            } else {
+                                echo 'Active';
+                            }
+                            ?>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+    <?php else: ?>
+    <div class="content-card mb-4">
+        <div class="p-4 text-center text-muted">
+            <i class="bi bi-person-slash fs-1 d-block mb-2"></i>
+            No active users in the last 30 minutes
+        </div>
+    </div>
+    <?php endif; ?>
+    
     <!-- Filters -->
     <div class="content-card mb-4">
         <div class="p-3">
+            <h6 class="mb-3"><i class="bi bi-funnel me-2"></i>Filter Activity Logs</h6>
             <form method="GET" action="" class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small">Action Type</label>
@@ -181,11 +324,12 @@ require_once __DIR__ . '/includes/header.php';
                     <?php foreach ($logs as $log): ?>
                     <?php 
                         $actionClass = 'default';
-                        if (strpos($log['action_type'], 'create') !== false) $actionClass = 'create';
-                        elseif (strpos($log['action_type'], 'update') !== false) $actionClass = 'update';
-                        elseif (strpos($log['action_type'], 'delete') !== false) $actionClass = 'delete';
-                        elseif (strpos($log['action_type'], 'login') !== false) $actionClass = 'login';
-                        elseif (strpos($log['action_type'], 'logout') !== false) $actionClass = 'logout';
+                        $actionType = $log['action_type'] ?? '';
+                        if ($actionType && strpos($actionType, 'create') !== false) $actionClass = 'create';
+                        elseif ($actionType && strpos($actionType, 'update') !== false) $actionClass = 'update';
+                        elseif ($actionType && strpos($actionType, 'delete') !== false) $actionClass = 'delete';
+                        elseif ($actionType && strpos($actionType, 'login') !== false) $actionClass = 'login';
+                        elseif ($actionType && strpos($actionType, 'logout') !== false) $actionClass = 'logout';
                     ?>
                     <tr>
                         <td class="text-muted small text-nowrap">
@@ -193,25 +337,25 @@ require_once __DIR__ . '/includes/header.php';
                             <br><?php echo date('H:i:s', strtotime($log['created_at'])); ?>
                         </td>
                         <td>
-                            <?php if ($log['full_name']): ?>
+                            <?php if (!empty($log['full_name'])): ?>
                             <strong><?php echo htmlspecialchars($log['full_name']); ?></strong>
-                            <br><small class="text-muted">@<?php echo $log['username']; ?></small>
+                            <br><small class="text-muted">@<?php echo htmlspecialchars($log['username'] ?? ''); ?></small>
                             <?php else: ?>
                             <span class="text-muted">System</span>
                             <?php endif; ?>
                         </td>
                         <td>
                             <span class="log-action <?php echo $actionClass; ?>">
-                                <?php echo htmlspecialchars($log['action_type']); ?>
+                                <?php echo htmlspecialchars($actionType ?: 'unknown'); ?>
                             </span>
                         </td>
                         <td><code class="small"><?php echo htmlspecialchars($log['table_name'] ?? '-'); ?></code></td>
                         <td><?php echo $log['record_id'] ?? '-'; ?></td>
                         <td class="text-muted small"><?php echo htmlspecialchars($log['ip_address'] ?? '-'); ?></td>
                         <td>
-                            <?php if ($log['new_data']): ?>
+                            <?php if (!empty($log['new_data'])): ?>
                             <div class="json-data">
-                                <pre class="mb-0 text-info"><?php echo htmlspecialchars(json_encode(json_decode($log['new_data']), JSON_PRETTY_PRINT)); ?></pre>
+                                <pre class="mb-0 text-info"><?php echo htmlspecialchars(json_encode(json_decode($log['new_data']), JSON_PRETTY_PRINT) ?: $log['new_data']); ?></pre>
                             </div>
                             <?php else: ?>
                             <span class="text-muted">-</span>
