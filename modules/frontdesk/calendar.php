@@ -391,7 +391,7 @@ body[data-theme="light"] .grid-room-type-header {
 .calendar-grid {
     display: grid;
     gap: 0;
-    grid-template-columns: 140px repeat(<?php echo count($dates); ?>, 90px);
+    grid-template-columns: 100px repeat(<?php echo count($dates); ?>, 90px);
     width: fit-content;
     min-width: fit-content;
     max-width: none;
@@ -519,10 +519,12 @@ body[data-theme="light"] .grid-date-cell.today {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
+    text-align: center;
     gap: 0.02rem;
-    min-width: 140px;
+    min-width: 100px;
     cursor: grab;
-    font-size: 0.75rem;
+    font-size: 0.9rem;
     min-height: 32px;
     box-shadow: 2px 0 5px rgba(0,0,0,0.1); /* Shadow to separate sidebar */
     white-space: normal;
@@ -552,8 +554,9 @@ body[data-theme="light"] .grid-room-label {
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     gap: 0.25rem;
+    min-width: 100px;
     min-height: 30px; /* Slight increase for better spacing */
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
 }
