@@ -41,6 +41,7 @@ try {
     // Get Inhouse Guests and Upcoming Check-ins - aggregate from hotel businesses
     $inhouseGuests = 0;
     $inhouseRooms = 0;
+    $inhouseList = [];
     $upcomingList = [];
     
     foreach ($businesses as $business) {
@@ -59,6 +60,26 @@ try {
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
                 $inhouseGuests += (int)($result['guests'] ?? 0);
                 $inhouseRooms += (int)($result['rooms'] ?? 0);
+                
+                // Get inhouse guest names with room info
+                $stmt2 = $bizPdo->prepare(
+                    "SELECT 
+                        g.guest_name,
+                        r.room_number,
+                        b.check_in_date,
+                        b.check_out_date,
+                        DATEDIFF(b.check_out_date, b.check_in_date) as nights,
+                        b.total_guests
+                     FROM bookings b
+                     LEFT JOIN guests g ON b.guest_id = g.id
+                     LEFT JOIN rooms r ON b.room_id = r.id
+                     WHERE b.status = 'checked_in'
+                     ORDER BY r.room_number ASC
+                     LIMIT 20"
+                );
+                $stmt2->execute();
+                $inhouse = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+                $inhouseList = array_merge($inhouseList, $inhouse);
             } catch (Exception $e) {}
             
             // Get Upcoming Check-ins
@@ -102,11 +123,17 @@ try {
     }
     $upcomingCount = count($upcomingList);
     
+    // Format inhouse dates
+    foreach ($inhouseList as &$item) {
+        $item['check_out_formatted'] = date('d M', strtotime($item['check_out_date']));
+    }
+
     echo json_encode([
         'success' => true,
         'inhouse' => [
             'guests' => (int)$inhouseGuests,
-            'rooms' => (int)$inhouseRooms
+            'rooms' => (int)$inhouseRooms,
+            'list' => $inhouseList
         ],
         'upcoming' => [
             'count' => (int)$upcomingCount,
@@ -118,7 +145,7 @@ try {
     echo json_encode([
         'success' => false,
         'message' => $e->getMessage(),
-        'inhouse' => ['guests' => 0, 'rooms' => 0],
+        'inhouse' => ['guests' => 0, 'rooms' => 0, 'list' => []],
         'upcoming' => ['count' => 0, 'list' => []]
     ]);
 }

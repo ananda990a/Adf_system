@@ -1071,28 +1071,42 @@ $logoFile = 'logo-alt.png';
         
         <!-- Inhouse Guests & Upcoming Check-ins -->
         <div class="section-card">
-            <div class="section-title">
+            <div class="section-title" style="margin-bottom: 1rem;">
                 <i data-feather="users" style="width: 20px; height: 20px; color: #4338ca;"></i>
                 Guest Overview
             </div>
-            <div class="stats-grid" style="grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem;">
-                <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 1rem; border-radius: 12px; text-align: center;">
-                    <div style="font-size: 0.75rem; color: #1e40af; font-weight: 600; margin-bottom: 0.25rem;">Inhouse Now</div>
-                    <div style="font-size: 1.75rem; font-weight: 700; color: #1e3a8a;" id="inhouseCount">0</div>
-                    <div style="font-size: 0.7rem; color: #3b82f6;" id="inhouseRooms">0 rooms</div>
+            
+            <!-- Stats Row -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem;">
+                <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 0.75rem; border-radius: 10px; text-align: center;">
+                    <div style="font-size: 0.7rem; color: #1e40af; font-weight: 600;">🏨 Inhouse</div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: #1e3a8a;" id="inhouseCount">0</div>
+                    <div style="font-size: 0.65rem; color: #3b82f6;" id="inhouseRooms">0 rooms</div>
                 </div>
-                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 1rem; border-radius: 12px; text-align: center;">
-                    <div style="font-size: 0.75rem; color: #92400e; font-weight: 600; margin-bottom: 0.25rem;">Check-in This Week</div>
-                    <div style="font-size: 1.75rem; font-weight: 700; color: #78350f;" id="upcomingCheckins">0</div>
-                    <div style="font-size: 0.7rem; color: #d97706;" id="upcomingDetails">0 reservations</div>
+                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 0.75rem; border-radius: 10px; text-align: center;">
+                    <div style="font-size: 0.7rem; color: #92400e; font-weight: 600;">📅 Upcoming</div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: #78350f;" id="upcomingCheckins">0</div>
+                    <div style="font-size: 0.65rem; color: #d97706;" id="upcomingDetails">this week</div>
                 </div>
             </div>
             
-            <!-- Upcoming Check-ins List -->
-            <div style="margin-top: 1rem;">
-                <div style="font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">📅 Upcoming Arrivals</div>
-                <div id="upcomingList" style="max-height: 200px; overflow-y: auto;">
-                    <div style="text-align: center; color: #9ca3af; padding: 1rem; font-size: 0.8rem;">Loading...</div>
+            <!-- Inhouse Guest List -->
+            <div style="background: #f8fafc; border-radius: 10px; padding: 0.75rem; margin-bottom: 0.75rem;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #1e3a8a; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.25rem;">
+                    <span>🛏️</span> Tamu Inhouse
+                </div>
+                <div id="inhouseList" style="max-height: 150px; overflow-y: auto;">
+                    <div style="text-align: center; color: #9ca3af; padding: 0.5rem; font-size: 0.75rem;">Loading...</div>
+                </div>
+            </div>
+            
+            <!-- Upcoming Arrivals -->
+            <div style="background: #fffbeb; border-radius: 10px; padding: 0.75rem;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #92400e; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.25rem;">
+                    <span>📅</span> Upcoming Arrivals
+                </div>
+                <div id="upcomingList" style="max-height: 120px; overflow-y: auto;">
+                    <div style="text-align: center; color: #9ca3af; padding: 0.5rem; font-size: 0.75rem;">Loading...</div>
                 </div>
             </div>
         </div>
@@ -1107,23 +1121,6 @@ $logoFile = 'logo-alt.png';
                 <canvas id="reservationChart"></canvas>
             </div>
         </div>
-        
-        <!-- Health Report Link -->
-        <a href="health-report.php" style="text-decoration: none;">
-            <div class="section-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; cursor: pointer; transition: transform 0.3s;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div>
-                        <div style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.5rem;">
-                            🏥 Company Health Report
-                        </div>
-                        <div style="font-size: 0.875rem; opacity: 0.9;">
-                            AI Analysis & Business Recommendations
-                        </div>
-                    </div>
-                    <i data-feather="chevron-right" style="width: 28px; height: 28px;"></i>
-                </div>
-            </div>
-        </a>
         
         <!-- Recent Transactions -->
         <div class="section-card">
@@ -1893,31 +1890,50 @@ $logoFile = 'logo-alt.png';
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Inhouse
+                    // Inhouse stats
                     document.getElementById('inhouseCount').textContent = data.inhouse?.guests || 0;
                     document.getElementById('inhouseRooms').textContent = `${data.inhouse?.rooms || 0} rooms`;
                     
-                    // Upcoming
+                    // Upcoming stats
                     document.getElementById('upcomingCheckins').textContent = data.upcoming?.count || 0;
-                    document.getElementById('upcomingDetails').textContent = `${data.upcoming?.count || 0} reservations`;
+                    document.getElementById('upcomingDetails').textContent = 'this week';
                     
-                    // Upcoming List
-                    const listContainer = document.getElementById('upcomingList');
-                    if (data.upcoming?.list && data.upcoming.list.length > 0) {
-                        listContainer.innerHTML = data.upcoming.list.map(g => `
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: #f9fafb; border-radius: 8px; margin-bottom: 0.5rem;">
-                                <div>
-                                    <div style="font-size: 0.8rem; font-weight: 600; color: #1f2937;">${g.guest_name}</div>
-                                    <div style="font-size: 0.7rem; color: #6b7280;">Room ${g.room_number || '-'}</div>
+                    // Inhouse Guest List
+                    const inhouseContainer = document.getElementById('inhouseList');
+                    if (data.inhouse?.list && data.inhouse.list.length > 0) {
+                        inhouseContainer.innerHTML = data.inhouse.list.map(g => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0.5rem; background: white; border-radius: 6px; margin-bottom: 0.35rem; border: 1px solid #e5e7eb;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="background: #dbeafe; color: #1e40af; font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.4rem; border-radius: 4px; min-width: 36px; text-align: center;">${g.room_number || '-'}</span>
+                                    <span style="font-size: 0.75rem; font-weight: 600; color: #1f2937;">${g.guest_name}</span>
                                 </div>
                                 <div style="text-align: right;">
-                                    <div style="font-size: 0.7rem; font-weight: 500; color: #4f46e5;">${g.check_in_date}</div>
-                                    <div style="font-size: 0.65rem; color: #9ca3af;">${g.nights || 1} night(s)</div>
+                                    <span style="font-size: 0.65rem; color: #6b7280;">C/O ${g.check_out_formatted}</span>
+                                    ${g.total_guests > 1 ? `<span style="font-size: 0.6rem; color: #9ca3af; margin-left: 0.25rem;">(${g.total_guests}👤)</span>` : ''}
                                 </div>
                             </div>
                         `).join('');
                     } else {
-                        listContainer.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 1rem; font-size: 0.8rem;">No upcoming check-ins</div>';
+                        inhouseContainer.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 0.5rem; font-size: 0.75rem;">Tidak ada tamu inhouse</div>';
+                    }
+                    
+                    // Upcoming List
+                    const upcomingContainer = document.getElementById('upcomingList');
+                    if (data.upcoming?.list && data.upcoming.list.length > 0) {
+                        upcomingContainer.innerHTML = data.upcoming.list.map(g => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0.5rem; background: white; border-radius: 6px; margin-bottom: 0.35rem; border: 1px solid #fde68a;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="background: #fef3c7; color: #92400e; font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.4rem; border-radius: 4px; min-width: 36px; text-align: center;">${g.room_number || '-'}</span>
+                                    <span style="font-size: 0.75rem; font-weight: 600; color: #1f2937;">${g.guest_name}</span>
+                                </div>
+                                <div style="text-align: right;">
+                                    <span style="font-size: 0.65rem; font-weight: 500; color: #d97706;">${g.check_in_date}</span>
+                                    <span style="font-size: 0.6rem; color: #9ca3af; margin-left: 0.25rem;">${g.nights || 1}N</span>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        upcomingContainer.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 0.5rem; font-size: 0.75rem;">Tidak ada upcoming check-in</div>';
                     }
                 }
             } catch (error) {
