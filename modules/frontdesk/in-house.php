@@ -102,6 +102,38 @@ try {
     $inHouseGuests = [];
 }
 
+// Get Checkout History (today and yesterday)
+$checkoutHistory = [];
+try {
+    $yesterday = date('Y-m-d', strtotime('-1 day'));
+    $stmt = $conn->prepare("
+        SELECT 
+            b.id as booking_id,
+            b.booking_code,
+            b.check_in_date,
+            b.check_out_date,
+            b.actual_checkout_time,
+            b.final_price,
+            b.payment_status,
+            g.guest_name,
+            g.phone,
+            r.room_number,
+            rt.type_name
+        FROM bookings b
+        INNER JOIN guests g ON b.guest_id = g.id
+        INNER JOIN rooms r ON b.room_id = r.id
+        LEFT JOIN room_types rt ON r.room_type_id = rt.id
+        WHERE b.status = 'checked_out'
+        AND DATE(b.actual_checkout_time) >= :yesterday
+        ORDER BY b.actual_checkout_time DESC
+        LIMIT 20
+    ");
+    $stmt->execute(['yesterday' => $yesterday]);
+    $checkoutHistory = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    error_log("Checkout History Error: " . $e->getMessage());
+}
+
 // Calculate statistics
 $totalInHouse = count($inHouseGuests);
 $totalRevenue = array_sum(array_column($inHouseGuests, 'final_price'));
@@ -112,502 +144,412 @@ include '../../includes/header.php';
 ?>
 
 <style>
-:root {
-    --primary-color: #6366f1;
-    --secondary-color: #8b5cf6;
-    --success-color: #10b981;
-    --warning-color: #f59e0b;
-    --danger-color: #ef4444;
-    --glass-bg: rgba(255, 255, 255, 0.75);
-    --glass-border: rgba(255, 255, 255, 0.45);
-    --glass-blur: 16px;
-}
+.ih-container { max-width: 1400px; margin: 0 auto; }
 
-[data-theme="dark"] {
-    --glass-bg: rgba(30, 41, 59, 0.75);
-    --glass-border: rgba(71, 85, 105, 0.45);
-}
-
-.in-house-container {
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem;
-    background: linear-gradient(135deg, 
-        rgba(99, 102, 241, 0.03) 0%, 
-        rgba(139, 92, 246, 0.03) 50%,
-        rgba(236, 72, 153, 0.03) 100%);
-    min-height: 100vh;
-}
-
-/* Header */
-.page-header {
-    margin-bottom: 2rem;
+.ih-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 1rem;
     flex-wrap: wrap;
-    gap: 1rem;
-}
-
-.page-header h1 {
-    font-size: 2.2rem;
-    font-weight: 900;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin: 0;
-    display: flex;
-    align-items: center;
     gap: 0.75rem;
 }
 
-.page-header h1::before {
-    content: '🏨';
-    font-size: 2.2rem;
-    -webkit-text-fill-color: initial;
-    filter: drop-shadow(0 4px 12px rgba(99, 102, 241, 0.4));
-}
-
-.page-subtitle {
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-    margin-top: 0.5rem;
-}
-
-/* Stats Cards */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.25rem;
-    margin-bottom: 2rem;
-}
-
-.stat-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 2px solid transparent;
-    background-image: 
-        linear-gradient(var(--glass-bg), var(--glass-bg)),
-        linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(139, 92, 246, 0.3));
-    background-origin: border-box;
-    background-clip: padding-box, border-box;
-    border-radius: 16px;
-    padding: 1.5rem;
-    text-align: center;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 
-        0 4px 20px rgba(0, 0, 0, 0.08),
-        0 8px 40px rgba(99, 102, 241, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.stat-card:hover {
-    transform: translateY(-4px);
-}
-
-.stat-icon {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-}
-
-.stat-value {
-    font-size: 2rem;
-    font-weight: 900;
-    color: var(--text-primary);
-    margin-bottom: 0.25rem;
-}
-
-.stat-label {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-}
-
-/* Guest Cards Grid */
-.guests-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 1.25rem;
-}
-
-.guest-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 2px solid transparent;
-    background-image: 
-        linear-gradient(var(--glass-bg), var(--glass-bg)),
-        linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(139, 92, 246, 0.3));
-    background-origin: border-box;
-    background-clip: padding-box, border-box;
-    border-radius: 12px;
-    padding: 1.25rem;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 
-        0 4px 20px rgba(0, 0, 0, 0.08),
-        0 8px 40px rgba(99, 102, 241, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    position: relative;
-    overflow: hidden;
-}
-
-.guest-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-}
-
-.guest-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 
-        0 12px 32px rgba(0, 0, 0, 0.12),
-        0 16px 48px rgba(99, 102, 241, 0.2);
-}
-
-.guest-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-}
-
-.guest-name {
-    font-size: 1.25rem;
+.ih-header h1 {
+    font-size: 1.5rem;
     font-weight: 800;
-    color: var(--text-primary);
-    margin: 0 0 0.25rem 0;
-}
-
-.booking-code {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    font-family: 'Courier New', monospace;
-}
-
-.room-badge {
     background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: white;
-    padding: 0.5rem 0.75rem;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 0.875rem;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0;
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
-.guest-info {
-    margin-bottom: 1rem;
+.ih-subtitle {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
 }
 
-.info-row {
+/* Compact Stats */
+.ih-stats {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.ih-stat {
+    background: var(--bg-secondary);
+    border: 1px solid var(--bg-tertiary);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--glass-border);
-}
-
-.info-row:last-child {
-    border-bottom: none;
-}
-
-.info-icon {
-    font-size: 1rem;
-    width: 20px;
-    text-align: center;
-}
-
-.info-label {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    font-weight: 600;
-    min-width: 100px;
-}
-
-.info-value {
-    font-size: 0.875rem;
-    color: var(--text-primary);
-    font-weight: 600;
-}
-
-.guest-footer {
-    display: flex;
-    gap: 0.75rem;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--glass-border);
-}
-
-.btn {
+    min-width: 140px;
     flex: 1;
 }
 
-/* Quick View Style Buttons */
-.qv-btn {
-    padding: 0.65rem 1rem;
-    border-radius: 8px;
-    border: none;
+.ih-stat-icon {
+    font-size: 1.25rem;
+}
+
+.ih-stat-info { flex: 1; }
+
+.ih-stat-value {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.ih-stat-label {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Compact Guest Cards */
+.ih-guests {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.875rem;
+    margin-bottom: 2rem;
+}
+
+.ih-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--bg-tertiary);
+    border-radius: 10px;
+    padding: 0.875rem;
+    transition: all 0.2s ease;
+    position: relative;
+    border-left: 3px solid #6366f1;
+}
+
+.ih-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.ih-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed var(--bg-tertiary);
+}
+
+.ih-booking-code {
+    font-size: 0.7rem;
+    font-family: 'Courier New', monospace;
+    color: #6366f1;
     font-weight: 700;
+}
+
+.ih-room-badge {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 5px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.ih-guest-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.35rem;
+}
+
+.ih-info-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.ih-info-row span:first-child { font-size: 0.85rem; }
+
+.ih-payment {
+    background: var(--bg-primary);
+    border-radius: 6px;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ih-payment-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}
+
+.ih-payment-value {
     font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.ih-payment-badge {
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: white;
+}
+
+.ih-payment-badge.paid { background: #10b981; }
+.ih-payment-badge.partial { background: #f59e0b; }
+.ih-payment-badge.unpaid { background: #ef4444; }
+
+.ih-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.65rem;
+}
+
+.ih-btn {
+    flex: 1;
+    padding: 0.45rem 0.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    text-decoration: none;
+    gap: 0.3rem;
+    transition: all 0.2s;
     color: white;
-    position: relative;
+}
+
+.ih-btn-breakfast {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.ih-btn-checkout {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.ih-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+}
+
+/* History Section */
+.ih-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--bg-tertiary);
+}
+
+.ih-history {
+    background: var(--bg-secondary);
+    border: 1px solid var(--bg-tertiary);
+    border-radius: 10px;
     overflow: hidden;
 }
 
-.qv-btn::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
+.ih-history-item {
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 0.875rem;
+    border-bottom: 1px solid var(--bg-tertiary);
+    gap: 0.75rem;
+    font-size: 0.75rem;
 }
 
-.qv-btn:hover::before {
-    width: 300px;
-    height: 300px;
-}
+.ih-history-item:last-child { border-bottom: none; }
 
-.qv-btn:active {
-    transform: scale(0.95);
-}
+.ih-history-item:hover { background: var(--bg-primary); }
 
-.qv-checkout-btn {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.39);
-    flex: 1;
-}
-
-.qv-checkout-btn:hover {
-    background: linear-gradient(135deg, #dc2626, #b91c1c);
-    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
-    transform: translateY(-2px);
-}
-
-.qv-breakfast-btn {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    box-shadow: 0 4px 14px 0 rgba(245, 158, 11, 0.39);
-    flex: 1;
-}
-
-.qv-breakfast-btn:hover {
-    background: linear-gradient(135deg, #d97706, #b45309);
-    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
-    transform: translateY(-2px);
-}
-
-.status-badge {
-    padding: 0.35rem 0.65rem;
-    border-radius: 6px;
-    font-size: 0.7rem;
+.ih-history-room {
+    background: var(--bg-tertiary);
+    padding: 0.3rem 0.5rem;
+    border-radius: 4px;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.status-paid {
-    background: rgba(16, 185, 129, 0.15);
-    color: #10b981;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.status-unpaid {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.status-partial {
-    background: rgba(245, 158, 11, 0.15);
-    color: #f59e0b;
-    border: 1px solid rgba(245, 158, 11, 0.3);
-}
-
-.empty-state {
+    font-size: 0.7rem;
+    min-width: 45px;
     text-align: center;
-    padding: 4rem 2rem;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    border-radius: 16px;
-    border: 2px dashed var(--glass-border);
 }
 
-.empty-state-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
+.ih-history-guest {
+    flex: 1;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
-.empty-state-text {
-    font-size: 1.25rem;
-    color: var(--text-secondary);
-    margin: 0;
+.ih-history-time {
+    color: var(--text-muted);
+    font-size: 0.68rem;
 }
+
+.ih-history-price {
+    font-weight: 700;
+    color: #10b981;
+}
+
+.ih-empty {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+}
+
+.ih-empty-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
 
 @media (max-width: 768px) {
-    .guests-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .page-header h1 {
-        font-size: 1.75rem;
-    }
+    .ih-guests { grid-template-columns: 1fr; }
+    .ih-stats { flex-direction: column; }
+    .ih-stat { min-width: 100%; }
 }
 </style>
 
-<div class="in-house-container">
+<div class="ih-container">
     <!-- Header -->
-    <div class="page-header">
+    <div class="ih-header">
         <div>
-            <h1>Tamu In House</h1>
-            <p class="page-subtitle">Daftar tamu yang sedang menginap • <?php echo date('l, d F Y'); ?></p>
+            <h1>🏨 Tamu In House</h1>
+            <p class="ih-subtitle">Daftar tamu yang sedang menginap • <?php echo date('l, d F Y'); ?></p>
         </div>
     </div>
 
-    <!-- Statistics -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon">🏨</div>
-            <div class="stat-value"><?php echo $totalInHouse; ?></div>
-            <div class="stat-label">Total In House</div>
+    <!-- Compact Stats -->
+    <div class="ih-stats">
+        <div class="ih-stat">
+            <div class="ih-stat-icon">🏨</div>
+            <div class="ih-stat-info">
+                <div class="ih-stat-value"><?php echo $totalInHouse; ?></div>
+                <div class="ih-stat-label">Total In House</div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon">✅</div>
-            <div class="stat-value"><?php echo $paidCount; ?></div>
-            <div class="stat-label">Lunas</div>
+        <div class="ih-stat">
+            <div class="ih-stat-icon">✅</div>
+            <div class="ih-stat-info">
+                <div class="ih-stat-value"><?php echo $paidCount; ?></div>
+                <div class="ih-stat-label">Lunas</div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon">⚠️</div>
-            <div class="stat-value"><?php echo $unpaidCount; ?></div>
-            <div class="stat-label">Belum Bayar</div>
+        <div class="ih-stat">
+            <div class="ih-stat-icon">⚠️</div>
+            <div class="ih-stat-info">
+                <div class="ih-stat-value"><?php echo $unpaidCount; ?></div>
+                <div class="ih-stat-label">Belum Bayar</div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon">💰</div>
-            <div class="stat-value">Rp <?php echo number_format($totalRevenue, 0, ',', '.'); ?></div>
-            <div class="stat-label">Total Revenue</div>
+        <div class="ih-stat">
+            <div class="ih-stat-icon">💰</div>
+            <div class="ih-stat-info">
+                <div class="ih-stat-value">Rp <?php echo number_format($totalRevenue / 1000000, 1, ',', '.'); ?>jt</div>
+                <div class="ih-stat-label">Revenue</div>
+            </div>
         </div>
     </div>
 
-    <!-- Guest Cards -->
+    <!-- In House Guests -->
     <?php if (count($inHouseGuests) > 0): ?>
-    <div class="guests-grid">
+    <h2 class="ih-section-title">👥 Tamu Menginap (<?php echo $totalInHouse; ?>)</h2>
+    <div class="ih-guests">
         <?php foreach ($inHouseGuests as $guest): 
-            $checkIn = date('d M Y', strtotime($guest['check_in_date']));
-            $checkOut = date('d M Y', strtotime($guest['check_out_date']));
+            $checkIn = date('d/m', strtotime($guest['check_in_date']));
+            $checkOut = date('d/m', strtotime($guest['check_out_date']));
             $totalPrice = number_format($guest['final_price'], 0, ',', '.');
             $paidRaw = $guest['paid_amount'] ?? 0;
-            $paidAmount = number_format($paidRaw, 0, ',', '.');
-            $remaining = number_format($guest['final_price'] - $paidRaw, 0, ',', '.');
-            
-            // Payment badge
-            if ($guest['payment_status'] === 'paid') {
-                $paymentBadge = '<span style="background: #10b981; color: white; padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">LUNAS</span>';
-            } elseif ($guest['payment_status'] === 'partial') {
-                $paymentBadge = '<span style="background: #f59e0b; color: white; padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">CICILAN</span>';
-            } else {
-                $paymentBadge = '<span style="background: #ef4444; color: white; padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">BELUM BAYAR</span>';
-            }
-            
-            $bookingSource = $guest['booking_source'] ?? '';
-            $source = $bookingSource === 'walk_in' ? 'Walk-in' : ($bookingSource === 'phone' ? 'Phone' : ($bookingSource === 'online' ? 'Online' : 'OTA'));
+            $source = match($guest['booking_source'] ?? '') {
+                'walk_in' => 'Walk-in',
+                'phone' => 'Phone',
+                'online' => 'Online',
+                default => 'OTA'
+            };
+            $paymentClass = match($guest['payment_status']) {
+                'paid' => 'paid',
+                'partial' => 'partial',
+                default => 'unpaid'
+            };
+            $paymentLabel = match($guest['payment_status']) {
+                'paid' => 'LUNAS',
+                'partial' => 'CICIL',
+                default => 'PENDING'
+            };
         ?>
-        <div class="guest-card">
-            <div style="text-align: center; padding-bottom: 0.75rem; border-bottom: 2px solid rgba(99, 102, 241, 0.2);">
-                <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.25rem;">BOOKING CODE</div>
-                <div style="font-size: 1.1rem; font-weight: 800; color: #6366f1; font-family: 'Courier New', monospace;"><?php echo htmlspecialchars($guest['booking_code']); ?></div>
+        <div class="ih-card">
+            <div class="ih-card-header">
+                <div class="ih-booking-code"><?php echo htmlspecialchars($guest['booking_code']); ?></div>
+                <div class="ih-room-badge"><?php echo $guest['room_number']; ?></div>
             </div>
             
-            <div style="padding: 0.75rem 0;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <span style="font-size: 1.25rem;">👤</span>
-                    <div style="flex: 1;">
-                        <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px;">Tamu</div>
-                        <div style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary);"><?php echo htmlspecialchars($guest['guest_name']); ?></div>
-                    </div>
-                </div>
-                
-                <?php if ($guest['phone']): ?>
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <span style="font-size: 1.25rem;">📞</span>
-                    <div style="flex: 1;">
-                        <div style="font-size: 0.65rem; color: var(--text-secondary);">Phone</div>
-                        <div style="font-size: 0.85rem; color: var(--text-primary);"><?php echo htmlspecialchars($guest['phone']); ?></div>
-                    </div>
-                </div>
-                <?php endif; ?>
-                
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <span style="font-size: 1.25rem;">🏠</span>
-                    <div style="flex: 1;">
-                        <div style="font-size: 0.65rem; color: var(--text-secondary);">Room</div>
-                        <div style="font-size: 0.85rem; color: var(--text-primary); font-weight: 600;">Room <?php echo htmlspecialchars($guest['room_number']); ?> - <?php echo htmlspecialchars($guest['type_name']); ?></div>
-                    </div>
-                </div>
-                
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <span style="font-size: 1.25rem;">📅</span>
-                    <div style="flex: 1;">
-                        <div style="font-size: 0.65rem; color: var(--text-secondary);">Check-in / Check-out</div>
-                        <div style="font-size: 0.8rem; color: var(--text-primary);"><?php echo $checkIn; ?> → <?php echo $checkOut; ?></div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary);"><?php echo $guest['total_nights']; ?> malam • <?php echo $source; ?></div>
-                    </div>
-                </div>
+            <div class="ih-guest-name"><?php echo htmlspecialchars($guest['guest_name']); ?></div>
+            
+            <div class="ih-info-row">
+                <span>📞</span>
+                <?php echo htmlspecialchars($guest['phone'] ?: '-'); ?>
             </div>
             
-            <div style="background: rgba(99, 102, 241, 0.05); border-radius: 8px; padding: 0.75rem; margin-top: 0.75rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600;">STATUS PEMBAYARAN</div>
-                    <?php echo $paymentBadge; ?>
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
-                    <span style="font-size: 0.75rem; color: var(--text-secondary);">Total Harga:</span>
-                    <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">Rp <?php echo $totalPrice; ?></span>
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
-                    <span style="font-size: 0.75rem; color: var(--text-secondary);">Sudah Bayar:</span>
-                    <span style="font-size: 0.85rem; font-weight: 700; color: #10b981;">Rp <?php echo $paidAmount; ?></span>
-                </div>
-                
-                <?php if ($guest['payment_status'] !== 'paid'): ?>
-                <div style="display: flex; justify-content: space-between; padding-top: 0.35rem; border-top: 1px dashed rgba(99, 102, 241, 0.3);">
-                    <span style="font-size: 0.75rem; color: var(--text-secondary);">Sisa:</span>
-                    <span style="font-size: 0.9rem; font-weight: 800; color: #ef4444;">Rp <?php echo $remaining; ?></span>
-                </div>
-                <?php endif; ?>
+            <div class="ih-info-row">
+                <span>📅</span>
+                <?php echo $checkIn; ?> → <?php echo $checkOut; ?> (<?php echo $guest['total_nights']; ?> mlm) • <?php echo $source; ?>
             </div>
-
-            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
-                <button class="qv-btn qv-breakfast-btn" onclick="selectBreakfast(<?php echo $guest['booking_id']; ?>, '<?php echo htmlspecialchars($guest['guest_name']); ?>')">Breakfast</button>
-                <button class="qv-btn qv-checkout-btn" onclick="doCheckOutGuest(<?php echo $guest['booking_id']; ?>, '<?php echo htmlspecialchars($guest['guest_name']); ?>', '<?php echo $guest['room_number']; ?>')">Check-out</button>
+            
+            <div class="ih-info-row">
+                <span>🏠</span>
+                <?php echo htmlspecialchars($guest['type_name']); ?>
+            </div>
+            
+            <div class="ih-payment">
+                <div>
+                    <div class="ih-payment-label">Total Harga</div>
+                    <div class="ih-payment-value">Rp <?php echo $totalPrice; ?></div>
+                </div>
+                <span class="ih-payment-badge <?php echo $paymentClass; ?>"><?php echo $paymentLabel; ?></span>
+            </div>
+            
+            <div class="ih-actions">
+                <button class="ih-btn ih-btn-breakfast" onclick="selectBreakfast(<?php echo $guest['booking_id']; ?>, '<?php echo htmlspecialchars($guest['guest_name']); ?>')">
+                    🍳 Breakfast
+                </button>
+                <button class="ih-btn ih-btn-checkout" onclick="doCheckOutGuest(<?php echo $guest['booking_id']; ?>, '<?php echo htmlspecialchars($guest['guest_name']); ?>', '<?php echo $guest['room_number']; ?>')">
+                    🚪 Check-out
+                </button>
             </div>
         </div>
         <?php endforeach; ?>
     </div>
     <?php else: ?>
-    <div class="empty-state">
-        <div class="empty-state-icon">🏖️</div>
-        <p class="empty-state-text">Tidak ada tamu in house saat ini</p>
+    <div class="ih-empty">
+        <div class="ih-empty-icon">🏖️</div>
+        <p>Tidak ada tamu in house saat ini</p>
+    </div>
+    <?php endif; ?>
+
+    <!-- Checkout History -->
+    <?php if (count($checkoutHistory) > 0): ?>
+    <h2 class="ih-section-title" style="margin-top: 1.5rem;">📋 History Check-out (Hari Ini & Kemarin)</h2>
+    <div class="ih-history">
+        <?php foreach ($checkoutHistory as $history): 
+            $coTime = $history['actual_checkout_time'] ? date('d/m H:i', strtotime($history['actual_checkout_time'])) : '-';
+        ?>
+        <div class="ih-history-item">
+            <div class="ih-history-room"><?php echo $history['room_number']; ?></div>
+            <div class="ih-history-guest"><?php echo htmlspecialchars($history['guest_name']); ?></div>
+            <div class="ih-history-time">CO: <?php echo $coTime; ?></div>
+            <div class="ih-history-price">Rp <?php echo number_format($history['final_price'], 0, ',', '.'); ?></div>
+        </div>
+        <?php endforeach; ?>
     </div>
     <?php endif; ?>
 </div>
