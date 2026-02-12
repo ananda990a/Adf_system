@@ -99,20 +99,292 @@ if ($division_id > 0) {
 }
 
 include '../../includes/header.php';
+
+// Division colors for visual variety
+$divisionColors = [
+    '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', 
+    '#3b82f6', '#ef4444', '#14b8a6', '#f97316', '#06b6d4'
+];
 ?>
 
+<style>
+    .division-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 0.875rem;
+    }
+    
+    .division-card {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 0;
+        overflow: hidden;
+        border: 1px solid var(--bg-tertiary);
+        transition: all 0.2s ease;
+        position: relative;
+    }
+    
+    .division-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px -5px rgba(0,0,0,0.15);
+        border-color: var(--primary-color);
+    }
+    
+    .division-card-header {
+        padding: 0.75rem 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--bg-tertiary);
+    }
+    
+    .division-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+    
+    .division-title {
+        flex: 1;
+        margin-left: 0.75rem;
+    }
+    
+    .division-title h4 {
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+    }
+    
+    .division-title span {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .division-badge {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 20px;
+        background: var(--bg-tertiary);
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+    
+    .division-stats {
+        padding: 0.75rem 1rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+    
+    .division-stat {
+        text-align: center;
+        padding: 0.5rem;
+        border-radius: 8px;
+        background: var(--bg-primary);
+    }
+    
+    .division-stat-label {
+        font-size: 0.6rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin-bottom: 0.25rem;
+    }
+    
+    .division-stat-value {
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+    
+    .division-stat-value.income { color: #10b981; }
+    .division-stat-value.expense { color: #ef4444; }
+    
+    .division-footer {
+        padding: 0.65rem 1rem;
+        background: var(--bg-primary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .division-net {
+        font-size: 0.95rem;
+        font-weight: 800;
+    }
+    
+    .division-net.positive { color: #10b981; }
+    .division-net.negative { color: #ef4444; }
+    
+    .division-link {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+    }
+    
+    .division-selected {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+    
+    .division-selected::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        z-index: 2;
+    }
+    
+    .filter-card {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(139, 92, 246, 0.04));
+        border: 1px solid rgba(99, 102, 241, 0.15);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1.25rem;
+    }
+    
+    .filter-form {
+        display: flex;
+        gap: 1rem;
+        align-items: end;
+        flex-wrap: wrap;
+    }
+    
+    .filter-group {
+        flex: 1;
+        min-width: 180px;
+    }
+    
+    .filter-label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.4rem;
+        display: block;
+    }
+    
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--bg-tertiary);
+    }
+    
+    .section-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .section-subtitle {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+    
+    .detail-banner {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 1rem 1.25rem;
+        border-radius: 12px;
+        margin-bottom: 1.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .detail-banner h2 {
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .detail-banner span {
+        font-size: 0.75rem;
+        opacity: 0.9;
+    }
+    
+    .category-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        background: var(--bg-primary);
+        border-radius: 10px;
+        margin-bottom: 0.5rem;
+        border-left: 3px solid;
+    }
+    
+    .category-item.income { border-color: #10b981; }
+    .category-item.expense { border-color: #ef4444; }
+    
+    .category-info {
+        flex: 1;
+    }
+    
+    .category-name {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--text-primary);
+    }
+    
+    .category-meta {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+    }
+    
+    .category-amount {
+        font-weight: 800;
+        font-size: 0.95rem;
+    }
+    
+    @media (max-width: 768px) {
+        .division-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.625rem;
+        }
+        
+        .division-card-header { padding: 0.5rem 0.75rem; }
+        .division-icon { width: 28px; height: 28px; }
+        .division-title h4 { font-size: 0.8rem; }
+        .division-stats { padding: 0.5rem 0.75rem; }
+        .division-stat-value { font-size: 0.7rem; }
+        .division-footer { padding: 0.5rem 0.75rem; }
+        .division-net { font-size: 0.85rem; }
+        
+        .filter-form { flex-direction: column; }
+        .filter-group { width: 100%; }
+    }
+</style>
+
 <!-- Filter Section -->
-<div class="card" style="margin-bottom: 1.25rem;">
-    <form method="GET" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end;">
-        <div class="form-group" style="margin: 0;">
-            <label class="form-label">Bulan</label>
+<div class="filter-card">
+    <form method="GET" class="filter-form">
+        <div class="filter-group">
+            <label class="filter-label">📅 Periode Bulan</label>
             <input type="month" name="month" class="form-control" value="<?php echo $month; ?>">
         </div>
         
-        <div class="form-group" style="margin: 0;">
-            <label class="form-label">Divisi (Detail)</label>
+        <div class="filter-group">
+            <label class="filter-label">🏢 Pilih Divisi</label>
             <select name="division_id" class="form-control">
-                <option value="0">-- Semua Divisi --</option>
+                <option value="0">Semua Divisi</option>
                 <?php foreach ($divisions as $div): ?>
                     <option value="<?php echo $div['id']; ?>" <?php echo $division_id == $div['id'] ? 'selected' : ''; ?>>
                         <?php echo $div['division_name']; ?>
@@ -121,70 +393,67 @@ include '../../includes/header.php';
             </select>
         </div>
         
-        <button type="submit" class="btn btn-primary" style="height: 42px;">
-            <i data-feather="filter" style="width: 16px; height: 16px;"></i> Filter
+        <button type="submit" class="btn btn-primary" style="height: 40px; padding: 0 1.25rem;">
+            <i data-feather="search" style="width: 15px; height: 15px;"></i> Tampilkan
         </button>
     </form>
 </div>
 
 <!-- Division Summary Cards -->
-<div style="margin-bottom: 1.25rem;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-        <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">
-            Ringkasan Per Divisi - <?php echo $monthName; ?>
-        </h2>
-        <span style="font-size: 0.813rem; color: var(--text-muted);">
-            Total: <?php echo count($divisionSummary); ?> divisi
+<div style="margin-bottom: 1.5rem;">
+    <div class="section-header">
+        <div>
+            <h2 class="section-title">
+                <span style="font-size: 1.1rem;">📊</span> Ringkasan Divisi
+            </h2>
+            <span class="section-subtitle"><?php echo $monthName; ?></span>
+        </div>
+        <span style="font-size: 0.75rem; color: var(--text-muted); background: var(--bg-tertiary); padding: 0.35rem 0.75rem; border-radius: 20px;">
+            <?php echo count($divisionSummary); ?> divisi
         </span>
     </div>
     
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
-        <?php foreach ($divisionSummary as $div): ?>
-            <div class="card" style="padding: 1rem; position: relative;">
-                <a href="?month=<?php echo $month; ?>&division_id=<?php echo $div['division_id']; ?>" 
-                   style="position: absolute; inset: 0; z-index: 1;"></a>
+    <div class="division-grid">
+        <?php foreach ($divisionSummary as $index => $div): 
+            $color = $divisionColors[$index % count($divisionColors)];
+            $isSelected = $division_id == $div['division_id'];
+            $netClass = $div['net_balance'] >= 0 ? 'positive' : 'negative';
+        ?>
+            <div class="division-card <?php echo $isSelected ? 'division-selected' : ''; ?>">
+                <a href="?month=<?php echo $month; ?>&division_id=<?php echo $div['division_id']; ?>" class="division-link"></a>
                 
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
-                    <div style="flex: 1;">
-                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">
-                            <?php echo $div['division_code']; ?>
-                        </div>
-                        <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary);">
-                            <?php echo $div['division_name']; ?>
+                <div class="division-card-header">
+                    <div class="division-icon" style="background: <?php echo $color; ?>;">
+                        <?php echo strtoupper(substr($div['division_code'], 0, 2)); ?>
+                    </div>
+                    <div class="division-title">
+                        <span><?php echo $div['division_code']; ?></span>
+                        <h4><?php echo $div['division_name']; ?></h4>
+                    </div>
+                    <div class="division-badge"><?php echo $div['transaction_count']; ?> trx</div>
+                </div>
+                
+                <div class="division-stats">
+                    <div class="division-stat">
+                        <div class="division-stat-label">Masuk</div>
+                        <div class="division-stat-value income">
+                            <?php echo $div['total_income'] > 0 ? formatCurrency($div['total_income']) : '-'; ?>
                         </div>
                     </div>
-                    <div style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: var(--bg-tertiary); border-radius: 4px;">
-                        <?php echo $div['transaction_count']; ?> trx
+                    <div class="division-stat">
+                        <div class="division-stat-label">Keluar</div>
+                        <div class="division-stat-value expense">
+                            <?php echo $div['total_expense'] > 0 ? formatCurrency($div['total_expense']) : '-'; ?>
+                        </div>
                     </div>
                 </div>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
-                    <div>
-                        <div style="font-size: 0.688rem; color: var(--text-muted); margin-bottom: 0.25rem;">Pemasukan</div>
-                        <div style="font-size: 0.875rem; font-weight: 700; color: var(--success);">
-                            <?php echo formatCurrency($div['total_income']); ?>
-                        </div>
-                    </div>
-                    <div>
-                        <div style="font-size: 0.688rem; color: var(--text-muted); margin-bottom: 0.25rem;">Pengeluaran</div>
-                        <div style="font-size: 0.875rem; font-weight: 700; color: var(--danger);">
-                            <?php echo formatCurrency($div['total_expense']); ?>
-                        </div>
-                    </div>
+                <div class="division-footer">
+                    <span style="font-size: 0.7rem; color: var(--text-muted);">Net Balance</span>
+                    <span class="division-net <?php echo $netClass; ?>">
+                        <?php echo formatCurrency($div['net_balance']); ?>
+                    </span>
                 </div>
-                
-                <div style="padding-top: 0.75rem; border-top: 1px solid var(--bg-tertiary);">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.75rem; color: var(--text-muted);">Net Balance</span>
-                        <span style="font-size: 1.125rem; font-weight: 800; color: <?php echo $div['net_balance'] >= 0 ? 'var(--success)' : 'var(--danger)'; ?>;">
-                            <?php echo formatCurrency($div['net_balance']); ?>
-                        </span>
-                    </div>
-                </div>
-                
-                <?php if ($division_id == $div['division_id']): ?>
-                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));"></div>
-                <?php endif; ?>
             </div>
         <?php endforeach; ?>
     </div>
@@ -192,94 +461,89 @@ include '../../includes/header.php';
 
 <!-- Division Detail Section -->
 <?php if ($divisionDetail): ?>
-    <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.05)); padding: 1rem; border-radius: var(--radius-lg); border: 1px solid var(--bg-tertiary); margin-bottom: 1.25rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">
-                📌 Detail: <?php echo $divisionDetail['division_name']; ?> (<?php echo $divisionDetail['division_code']; ?>)
-            </h2>
-            <div style="display: flex; gap: 0.5rem;">
-                <button onclick="window.print()" class="btn btn-primary btn-sm">
-                    <i data-feather="printer" style="width: 14px; height: 14px;"></i> Cetak
-                </button>
-                <a href="?month=<?php echo $month; ?>" class="btn btn-secondary btn-sm">
-                    <i data-feather="x" style="width: 14px; height: 14px;"></i> Tutup Detail
-                </a>
-            </div>
+    <div class="detail-banner">
+        <div>
+            <h2>📌 <?php echo $divisionDetail['division_name']; ?></h2>
+            <span>Kode: <?php echo $divisionDetail['division_code']; ?> • <?php echo $monthName; ?></span>
+        </div>
+        <div style="display: flex; gap: 0.5rem; position: relative; z-index: 2;">
+            <button onclick="window.print()" class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white; border: none;">
+                <i data-feather="printer" style="width: 14px; height: 14px;"></i>
+            </button>
+            <a href="?month=<?php echo $month; ?>" class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white; border: none;">
+                <i data-feather="x" style="width: 14px; height: 14px;"></i>
+            </a>
         </div>
     </div>
     
     <!-- Category Breakdown -->
     <?php if (!empty($categoryBreakdown)): ?>
-        <div class="card" style="margin-bottom: 1.25rem;">
-            <div style="padding: 0.75rem 0 0.5rem 0; border-bottom: 1px solid var(--bg-tertiary); margin-bottom: 1rem;">
-                <h3 style="font-size: 0.95rem; color: var(--text-primary); font-weight: 600;">
-                    📊 Breakdown Per Kategori
+        <div class="card" style="margin-bottom: 1.25rem; padding: 1rem;">
+            <div class="section-header" style="margin-bottom: 0.75rem; padding-bottom: 0.5rem;">
+                <h3 class="section-title" style="font-size: 0.9rem;">
+                    <span>📊</span> Breakdown Kategori
                 </h3>
             </div>
             
-            <div style="display: grid; gap: 0.5rem;">
-                <?php foreach ($categoryBreakdown as $cat): ?>
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem; background: var(--bg-tertiary); border-radius: var(--radius-md);">
-                        <div style="flex: 1;">
-                            <div style="font-weight: 600; font-size: 0.875rem; color: var(--text-primary);">
-                                <?php echo $cat['category_name']; ?>
-                            </div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted);">
-                                <?php echo $cat['transaction_count']; ?> transaksi • 
-                                <?php echo $cat['transaction_type'] === 'income' ? 'Pemasukan' : 'Pengeluaran'; ?>
-                            </div>
-                        </div>
-                        <div style="font-weight: 800; font-size: 1rem; color: <?php echo $cat['transaction_type'] === 'income' ? 'var(--success)' : 'var(--danger)'; ?>;">
-                            <?php echo $cat['transaction_type'] === 'income' ? '+' : '-'; ?><?php echo formatCurrency($cat['total_amount']); ?>
+            <?php foreach ($categoryBreakdown as $cat): 
+                $isIncome = $cat['transaction_type'] === 'income';
+            ?>
+                <div class="category-item <?php echo $isIncome ? 'income' : 'expense'; ?>">
+                    <div class="category-info">
+                        <div class="category-name"><?php echo $cat['category_name'] ?: 'Lainnya'; ?></div>
+                        <div class="category-meta">
+                            <?php echo $cat['transaction_count']; ?> transaksi • 
+                            <?php echo $isIncome ? '📈 Pemasukan' : '📉 Pengeluaran'; ?>
                         </div>
                     </div>
-                <?php endforeach; ?>
-            </div>
+                    <div class="category-amount" style="color: <?php echo $isIncome ? '#10b981' : '#ef4444'; ?>;">
+                        <?php echo $isIncome ? '+' : '-'; ?><?php echo formatCurrency($cat['total_amount']); ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
         </div>
     <?php endif; ?>
     
     <!-- Recent Transactions -->
     <?php if (!empty($divisionTransactions)): ?>
-        <div class="card">
-            <div style="padding: 0.75rem 0 0.5rem 0; border-bottom: 1px solid var(--bg-tertiary); margin-bottom: 1rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="font-size: 0.95rem; color: var(--text-primary); font-weight: 600;">
-                        📝 Rincian Transaksi
-                    </h3>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">
-                        Total: <?php echo count($divisionTransactions); ?> transaksi
-                    </span>
-                </div>
+        <div class="card" style="padding: 1rem;">
+            <div class="section-header" style="margin-bottom: 0.75rem; padding-bottom: 0.5rem;">
+                <h3 class="section-title" style="font-size: 0.9rem;">
+                    <span>📝</span> Rincian Transaksi
+                </h3>
+                <span class="section-subtitle">
+                    <?php echo count($divisionTransactions); ?> transaksi
+                </span>
             </div>
             
             <div class="table-responsive">
-                <table class="table">
+                <table class="table" style="font-size: 0.8rem;">
                     <thead>
                         <tr>
-                            <th>Tanggal</th>
+                            <th style="width: 80px;">Tanggal</th>
                             <th>Kategori</th>
                             <th>Keterangan</th>
-                            <th>Tipe</th>
-                            <th class="text-right">Jumlah</th>
+                            <th style="width: 70px;">Tipe</th>
+                            <th class="text-right" style="width: 110px;">Jumlah</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($divisionTransactions as $trans): ?>
                             <tr>
-                                <td style="white-space: nowrap; font-size: 0.813rem;">
-                                    <?php echo date('d/m/Y', strtotime($trans['transaction_date'])); ?>
+                                <td style="white-space: nowrap;">
+                                    <?php echo date('d/m/y', strtotime($trans['transaction_date'])); ?>
                                 </td>
-                                <td style="font-size: 0.813rem;"><?php echo $trans['category_name']; ?></td>
-                                <td style="font-size: 0.813rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">
-                                    <?php echo $trans['description']; ?>
+                                <td><?php echo $trans['category_name'] ?: '-'; ?></td>
+                                <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    <?php echo $trans['description'] ?: '-'; ?>
                                 </td>
                                 <td>
-                                    <span class="badge badge-<?php echo $trans['transaction_type'] === 'income' ? 'success' : 'danger'; ?>">
-                                        <?php echo $trans['transaction_type'] === 'income' ? 'Masuk' : 'Keluar'; ?>
+                                    <span class="badge badge-<?php echo $trans['transaction_type'] === 'income' ? 'success' : 'danger'; ?>" style="font-size: 0.65rem;">
+                                        <?php echo $trans['transaction_type'] === 'income' ? '↗ Masuk' : '↘ Keluar'; ?>
                                     </span>
                                 </td>
-                                <td class="text-right" style="font-weight: 700; font-size: 0.875rem; color: <?php echo $trans['transaction_type'] === 'income' ? 'var(--success)' : 'var(--danger)'; ?>;">
-                                    <?php echo $trans['transaction_type'] === 'income' ? '+' : '-'; ?><?php echo formatCurrency($trans['amount']); ?>
+                                <td class="text-right" style="font-weight: 700; color: <?php echo $trans['transaction_type'] === 'income' ? '#10b981' : '#ef4444'; ?>;">
+                                    <?php echo formatCurrency($trans['amount']); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -288,8 +552,9 @@ include '../../includes/header.php';
             </div>
         </div>
     <?php else: ?>
-        <div class="card">
-            <p style="text-align: center; padding: 2rem; color: var(--text-muted);">
+        <div class="card" style="padding: 2rem; text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📭</div>
+            <p style="color: var(--text-muted); margin: 0;">
                 Tidak ada transaksi untuk divisi ini di bulan <?php echo $monthName; ?>
             </p>
         </div>
