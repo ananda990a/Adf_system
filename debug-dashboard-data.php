@@ -5,11 +5,34 @@
 
 define('APP_ACCESS', true);
 require_once 'config/config.php';
+require_once 'includes/business_helper.php';
+require_once 'includes/functions.php';
 require_once 'config/database.php';
 
 $db = Database::getInstance();
 
 echo "<h2>Database Debug - " . DB_NAME . "</h2>";
+
+// Check CURRENCY constants
+echo "<h3>0. Currency Constants:</h3>";
+echo "<pre>";
+echo "CURRENCY_SYMBOL: '" . CURRENCY_SYMBOL . "' (length: " . strlen(CURRENCY_SYMBOL) . ", ord: " . ord(CURRENCY_SYMBOL[0]) . ")\n";
+echo "CURRENCY_DECIMAL: " . CURRENCY_DECIMAL . "\n";
+echo "formatCurrency(1000000) = " . formatCurrency(1000000) . "\n";
+echo "</pre>";
+
+// Test number_format directly
+echo "<h3>0b. Number Format Test:</h3>";
+echo "<pre>";
+echo "number_format(1450000, 0, ',', '.') = " . number_format(1450000, 0, ',', '.') . "\n";
+echo "Rp . ' ' . number_format = Rp " . number_format(1450000, 0, ',', '.') . "\n";
+echo "</pre>";
+
+// Check ACTIVE_BUSINESS_ID
+echo "<h3>0c. Active Business:</h3>";
+echo "<pre>";
+echo "ACTIVE_BUSINESS_ID: " . (defined('ACTIVE_BUSINESS_ID') ? ACTIVE_BUSINESS_ID : 'NOT DEFINED') . "\n";
+echo "</pre>";
 
 // Check cash_book table structure
 echo "<h3>1. Cash Book Table Structure:</h3>";
