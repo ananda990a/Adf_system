@@ -342,23 +342,6 @@ if (isset($_GET['biz'])) {
             text-align: center;
         }
         
-        .btn-primary {
-            width: 100%;
-            padding: 1rem;
-            background: #6366f1;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.125rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 1rem;
-        }
-        
-        .btn-primary:hover {
-            background: #4f46e5;
-        }
-        
         .database-status {
             background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.6));
             border: 1px solid #334155;
