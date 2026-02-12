@@ -223,599 +223,684 @@ include '../../includes/header.php';
 ?>
 
 <style>
-.breakfast-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem;
-}
+.bf-container { max-width: 1300px; margin: 0 auto; }
 
-.breakfast-header {
+.bf-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
 }
 
-.breakfast-header h1 {
-    font-size: 2rem;
-    font-weight: 900;
+.bf-header h1 {
+    font-size: 1.5rem;
+    font-weight: 800;
     background: linear-gradient(135deg, #f59e0b, #f97316);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
-.header-actions .btn {
-    padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: white;
-    border: none;
+.bf-header-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.bf-header-btn {
+    padding: 0.5rem 0.875rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--bg-tertiary);
+    color: var(--text-primary);
     border-radius: 8px;
-    font-weight: 700;
+    font-size: 0.75rem;
+    font-weight: 600;
     text-decoration: none;
-    display: inline-block;
-    transition: transform 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.2s;
 }
 
-.header-actions .btn:hover {
-    transform: translateY(-2px);
+.bf-header-btn:hover {
+    border-color: var(--primary-color);
+    background: rgba(99, 102, 241, 0.1);
 }
 
-.message {
-    padding: 1rem 1.5rem;
-    border-radius: 12px;
-    margin-bottom: 2rem;
+.bf-layout {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 1.25rem;
+}
+
+.bf-alert {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
     font-weight: 600;
 }
 
-.message.success {
-    background: rgba(16, 185, 129, 0.2);
-    border: 1px solid rgba(16, 185, 129, 0.5);
-    color: #6ee7b7;
+.bf-alert.success {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #10b981;
 }
 
-.message.error {
-    background: rgba(239, 68, 68, 0.2);
-    border: 1px solid rgba(239, 68, 68, 0.5);
-    color: #fca5a5;
+.bf-alert.error {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
 }
 
-.order-form-card {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(30px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 15px;
-    padding: 2rem;
+/* Form Card */
+.bf-form-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--bg-tertiary);
+    border-radius: 12px;
+    padding: 1rem;
 }
 
-.form-row {
+.bf-form-section {
+    margin-bottom: 1rem;
+}
+
+.bf-form-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.65rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--bg-tertiary);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.bf-form-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
 }
 
-.form-group {
+.bf-form-group {
     display: flex;
     flex-direction: column;
 }
 
-.form-group label {
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    color: rgba(255, 255, 255, 0.9);
+.bf-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 0.3rem;
 }
 
-.form-input {
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    background: rgba(99, 102, 241, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: var(--text-color);
-    font-size: 1rem;
-    transition: all 0.3s ease;
+.bf-input {
+    padding: 0.55rem 0.65rem;
+    border-radius: 6px;
+    background: var(--bg-primary);
+    border: 1px solid var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 0.85rem;
 }
 
-.form-input:focus {
+.bf-input:focus {
     outline: none;
-    border-color: #6366f1;
+    border-color: var(--primary-color);
+}
+
+.bf-radio-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.bf-radio-label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.5rem;
+    background: var(--bg-primary);
+    border: 2px solid var(--bg-tertiary);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.bf-radio-label:hover { border-color: var(--primary-color); }
+
+.bf-radio-label:has(input:checked) {
+    border-color: var(--primary-color);
     background: rgba(99, 102, 241, 0.15);
 }
 
-.form-textarea {
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    background: rgba(99, 102, 241, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: var(--text-color);
-    font-size: 1rem;
-    font-family: inherit;
-    resize: vertical;
+.bf-radio-label input { display: none; }
+
+/* Menu Section */
+.bf-menu-section {
+    margin-top: 1rem;
 }
 
-.form-textarea:focus {
-    outline: none;
-    border-color: #6366f1;
+.bf-menu-category {
+    margin-bottom: 1rem;
 }
 
-.radio-group {
-    display: flex;
-    gap: 1rem;
-    margin-top: 0.5rem;
-}
-
-.radio-label {
+.bf-menu-category-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    background: rgba(99, 102, 241, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
+    gap: 0.35rem;
 }
 
-.radio-label:hover {
-    border-color: #6366f1;
-    background: rgba(99, 102, 241, 0.2);
-}
-
-.radio-label input[type="radio"] {
-    cursor: pointer;
-}
-
-.radio-label input[type="radio"]:checked + span {
-    font-weight: 700;
-}
-
-.radio-label:has(input:checked) {
-    border-color: #6366f1;
-    background: rgba(99, 102, 241, 0.3);
-}
-
-.menu-section {
-    margin: 2rem 0;
-}
-
-.menu-section h3 {
-    font-size: 1.5rem;
-    font-weight: 900;
-    margin-bottom: 1.5rem;
-    color: rgba(255, 255, 255, 0.9);
-}
-
-.menu-category {
-    margin-bottom: 2rem;
-}
-
-.menu-category h4 {
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.menu-grid {
+.bf-menu-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.5rem;
 }
 
-.menu-item {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    padding: 1rem;
-    transition: all 0.3s ease;
+.bf-menu-item {
+    background: var(--bg-primary);
+    border: 1px solid var(--bg-tertiary);
+    border-radius: 8px;
+    padding: 0.65rem;
+    transition: all 0.2s;
+    cursor: pointer;
 }
 
-.menu-item:hover {
-    border-color: #6366f1;
-    background: rgba(99, 102, 241, 0.1);
+.bf-menu-item:hover {
+    border-color: var(--primary-color);
 }
 
-.menu-checkbox {
+.bf-menu-item:has(input:checked) {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.bf-menu-checkbox {
     display: flex;
-    align-items: start;
-    gap: 0.75rem;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.bf-menu-checkbox input[type="checkbox"] {
+    margin-top: 0.15rem;
+    width: 16px;
+    height: 16px;
     cursor: pointer;
 }
 
-.menu-checkbox input[type="checkbox"] {
-    margin-top: 0.25rem;
-    cursor: pointer;
-    width: 18px;
-    height: 18px;
-}
+.bf-menu-info { flex: 1; }
 
-.menu-info {
-    flex: 1;
-}
-
-.menu-name {
+.bf-menu-name {
+    font-size: 0.8rem;
     font-weight: 700;
-    font-size: 1.1rem;
-    margin-bottom: 0.25rem;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-primary);
+    margin-bottom: 0.2rem;
 }
 
-.menu-price {
+.bf-menu-price {
+    font-size: 0.72rem;
     font-weight: 700;
     color: #10b981;
-    margin-bottom: 0.25rem;
 }
 
-.menu-category-badge {
+.bf-menu-cat {
     display: inline-block;
-    padding: 0.25rem 0.75rem;
-    background: rgba(99, 102, 241, 0.2);
-    border-radius: 6px;
-    font-size: 0.75rem;
+    padding: 0.15rem 0.4rem;
+    background: rgba(99, 102, 241, 0.15);
+    border-radius: 4px;
+    font-size: 0.6rem;
     font-weight: 600;
     text-transform: uppercase;
-    margin-bottom: 0.5rem;
+    color: var(--primary-color);
 }
 
-.menu-description {
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.6);
-    margin-top: 0.5rem;
-}
-
-.menu-qty {
-    display: flex;
+.bf-menu-qty {
+    display: none;
     align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--bg-tertiary);
 }
 
-.menu-qty label {
-    font-weight: 600;
-    font-size: 0.9rem;
+.bf-menu-item:has(input:checked) .bf-menu-qty {
+    display: flex;
 }
 
-.qty-input {
-    width: 80px;
-    padding: 0.5rem;
-    border-radius: 6px;
-    background: rgba(99, 102, 241, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: var(--text-color);
+.bf-qty-input {
+    width: 50px;
+    padding: 0.3rem;
+    border-radius: 4px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 0.8rem;
     text-align: center;
 }
 
-.form-actions {
-    display: flex;
-    gap: 1rem;
-    margin-top: 2rem;
+.bf-textarea {
+    width: 100%;
+    padding: 0.55rem 0.65rem;
+    border-radius: 6px;
+    background: var(--bg-primary);
+    border: 1px solid var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 60px;
 }
 
-.btn-submit {
+.bf-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.bf-btn-submit {
     flex: 1;
-    padding: 1rem 2rem;
+    padding: 0.75rem 1rem;
     background: linear-gradient(135deg, #10b981, #059669);
     color: white;
     border: none;
-    border-radius: 10px;
-    font-size: 1.1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s;
 }
 
-.btn-submit:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+.bf-btn-submit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
-.btn-reset {
-    padding: 1rem 2rem;
-    background: rgba(239, 68, 68, 0.2);
-    color: #fca5a5;
-    border: 1px solid rgba(239, 68, 68, 0.5);
-    border-radius: 10px;
-    font-size: 1.1rem;
-    font-weight: 700;
+.bf-btn-reset {
+    padding: 0.75rem 1rem;
+    background: var(--bg-primary);
+    color: var(--text-muted);
+    border: 1px solid var(--bg-tertiary);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
 }
 
-.btn-reset:hover {
-    background: rgba(239, 68, 68, 0.3);
+/* Sidebar - Today's Orders */
+.bf-sidebar {
+    background: var(--bg-secondary);
+    border: 1px solid var(--bg-tertiary);
+    border-radius: 12px;
+    overflow: hidden;
+    height: fit-content;
+    position: sticky;
+    top: 1rem;
 }
 
-@media (max-width: 768px) {
-    .breakfast-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-    
-    .form-row {
+.bf-sidebar-title {
+    padding: 0.85rem 1rem;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.bf-order-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--bg-tertiary);
+    transition: background 0.2s;
+}
+
+.bf-order-item:last-child { border-bottom: none; }
+
+.bf-order-item:hover { background: var(--bg-primary); }
+
+.bf-order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.35rem;
+}
+
+.bf-order-time {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.bf-order-pax {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    color: var(--text-muted);
+}
+
+.bf-order-guest {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.bf-order-room {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+}
+
+.bf-order-menus {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.bf-order-menu-tag {
+    font-size: 0.62rem;
+    padding: 0.15rem 0.35rem;
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+    border-radius: 3px;
+}
+
+.bf-order-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.4rem;
+    padding-top: 0.35rem;
+    border-top: 1px dashed var(--bg-tertiary);
+}
+
+.bf-order-price {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #10b981;
+}
+
+.bf-order-status {
+    font-size: 0.6rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.bf-order-status.pending { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.bf-order-status.preparing { background: rgba(99, 102, 241, 0.2); color: #6366f1; }
+.bf-order-status.served { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+.bf-order-status.completed { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+
+.bf-empty {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.bf-empty-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+
+@media (max-width: 900px) {
+    .bf-layout {
         grid-template-columns: 1fr;
     }
     
-    .menu-grid {
-        grid-template-columns: 1fr;
+    .bf-sidebar {
+        position: static;
     }
     
-    .radio-group {
-        flex-direction: column;
+    .bf-menu-grid {
+        grid-template-columns: 1fr 1fr;
     }
+}
+
+@media (max-width: 600px) {
+    .bf-form-row { grid-template-columns: 1fr; }
+    .bf-menu-grid { grid-template-columns: 1fr; }
+    .bf-radio-group { flex-direction: column; }
 }
 </style>
 
-<div class="breakfast-container">
+<div class="bf-container">
     <!-- Header -->
-    <div class="breakfast-header">
-        <div>
-            <h1>🍽️ Breakfast Order</h1>
-            <p style="color: rgba(255, 255, 255, 0.7); margin-top: 0.5rem;">
-                Create new breakfast order • <?php echo date('l, d F Y'); ?>
-            </p>
-        </div>
-        <div class="header-actions">
-            <a href="breakfast-orders.php" class="btn">📋 View Orders</a>
-            <a href="dashboard.php" class="btn">🏠 Dashboard</a>
+    <div class="bf-header">
+        <h1>🍳 Breakfast Order</h1>
+        <div class="bf-header-actions">
+            <a href="breakfast-orders.php" class="bf-header-btn">📋 Orders</a>
+            <a href="in-house.php" class="bf-header-btn">👥 In House</a>
+            <a href="dashboard.php" class="bf-header-btn">🏠 Dashboard</a>
         </div>
     </div>
 
     <!-- Messages -->
     <?php if ($message): ?>
-    <div class="message success" style="font-size: 1.1rem; padding: 1.5rem;">
-        <?php echo $message; ?>
-    </div>
+    <div class="bf-alert success"><?php echo $message; ?></div>
     <?php endif; ?>
     
     <?php if ($error): ?>
-    <div class="message error" style="font-size: 1.1rem; padding: 1.5rem;">
-        <?php echo $error; ?>
-    </div>
+    <div class="bf-alert error"><?php echo $error; ?></div>
     <?php endif; ?>
 
-    <!-- Order Form -->
-    <div class="order-form-card">
-        <form method="POST" action="" id="breakfastOrderForm">
-            <input type="hidden" name="action" value="create_order">
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="guest_select">Guest (Optional)</label>
-                    <select name="booking_id" id="guest_select" class="form-input" onchange="fillGuestInfo(this)">
-                        <option value="">-- Walk-in Guest / Manual Entry --</option>
-                        <?php foreach ($inHouseGuests as $guest): ?>
-                        <option value="<?php echo $guest['booking_id']; ?>" 
-                                data-name="<?php echo htmlspecialchars($guest['guest_name']); ?>"
-                                data-room="<?php echo htmlspecialchars($guest['room_number']); ?>">
-                            Room <?php echo $guest['room_number']; ?> - <?php echo htmlspecialchars($guest['guest_name']); ?>
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="guest_name">Guest Name *</label>
-                    <input type="text" name="guest_name" id="guest_name" class="form-input" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="room_number">Room Number (if applicable)</label>
-                    <input type="text" name="room_number" id="room_number" class="form-input">
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="total_pax">Total Pax *</label>
-                    <input type="number" name="total_pax" id="total_pax" class="form-input" min="1" max="20" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="breakfast_time">Breakfast Time *</label>
-                    <input type="time" name="breakfast_time" id="breakfast_time" class="form-input" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="breakfast_date">Breakfast Date *</label>
-                    <input type="date" name="breakfast_date" id="breakfast_date" class="form-input" 
-                           value="<?php echo $today; ?>" required>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Location *</label>
-                    <div class="radio-group">
-                        <label class="radio-label">
-                            <input type="radio" name="location" value="restaurant" checked>
-                            <span>🍴 Restaurant</span>
-                        </label>
-                        <label class="radio-label">
-                            <input type="radio" name="location" value="room_service">
-                            <span>🛏️ Room Service</span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="menu-section">
-                <h3>Breakfast Menu</h3>
+    <div class="bf-layout">
+        <!-- Form -->
+        <div class="bf-form-card">
+            <form method="POST" action="" id="breakfastOrderForm">
+                <input type="hidden" name="action" value="create_order">
                 
-                <!-- Free Breakfast Menu -->
-                <?php if (count($freeMenus) > 0): ?>
-                <div class="menu-category">
-                    <h4>✨ Complimentary Breakfast (Free)</h4>
-                    <div class="menu-grid">
-                        <?php foreach ($freeMenus as $menu): ?>
-                        <div class="menu-item">
-                            <label class="menu-checkbox">
-                                <input type="checkbox" name="menu_items[]" value="<?php echo $menu['id']; ?>" 
-                                       onchange="toggleQuantity(this)">
-                                <div class="menu-info">
-                                    <div class="menu-name"><?php echo htmlspecialchars($menu['menu_name']); ?></div>
-                                    <div class="menu-category-badge"><?php echo $menu['category']; ?></div>
-                                    <?php if ($menu['description']): ?>
-                                    <div class="menu-description"><?php echo htmlspecialchars($menu['description']); ?></div>
-                                    <?php endif; ?>
-                                </div>
-                            </label>
-                            <div class="menu-qty" style="display: none;">
-                                <label>Qty:</label>
-                                <input type="number" name="menu_qty[<?php echo $menu['id']; ?>]" 
-                                       min="1" max="20" value="1" class="qty-input">
-                            </div>
+                <!-- Guest Info Section -->
+                <div class="bf-form-section">
+                    <div class="bf-form-title">👤 Guest Information</div>
+                    <div class="bf-form-row">
+                        <div class="bf-form-group" style="grid-column: span 2;">
+                            <label class="bf-label">Select Guest (In House)</label>
+                            <select name="booking_id" id="guest_select" class="bf-input" onchange="fillGuestInfo(this)">
+                                <option value="">-- Walk-in / Manual --</option>
+                                <?php foreach ($inHouseGuests as $guest): ?>
+                                <option value="<?php echo $guest['booking_id']; ?>" 
+                                        data-name="<?php echo htmlspecialchars($guest['guest_name']); ?>"
+                                        data-room="<?php echo htmlspecialchars($guest['room_number']); ?>">
+                                    Room <?php echo $guest['room_number']; ?> - <?php echo htmlspecialchars($guest['guest_name']); ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
-                        <?php endforeach; ?>
+                    </div>
+                    <div class="bf-form-row">
+                        <div class="bf-form-group">
+                            <label class="bf-label">Guest Name *</label>
+                            <input type="text" name="guest_name" id="guest_name" class="bf-input" required>
+                        </div>
+                        <div class="bf-form-group">
+                            <label class="bf-label">Room Number</label>
+                            <input type="text" name="room_number" id="room_number" class="bf-input">
+                        </div>
                     </div>
                 </div>
-                <?php endif; ?>
-
-                <!-- Paid Extras Menu -->
-                <?php if (count($paidMenus) > 0): ?>
-                <div class="menu-category">
-                    <h4>💰 Extra Items (Paid)</h4>
-                    <div class="menu-grid">
-                        <?php foreach ($paidMenus as $menu): ?>
-                        <div class="menu-item">
-                            <label class="menu-checkbox">
-                                <input type="checkbox" name="menu_items[]" value="<?php echo $menu['id']; ?>" 
-                                       onchange="toggleQuantity(this)">
-                                <div class="menu-info">
-                                    <div class="menu-name"><?php echo htmlspecialchars($menu['menu_name']); ?></div>
-                                    <div class="menu-price">Rp <?php echo number_format($menu['price'], 0, ',', '.'); ?></div>
-                                    <div class="menu-category-badge"><?php echo $menu['category']; ?></div>
-                                    <?php if ($menu['description']): ?>
-                                    <div class="menu-description"><?php echo htmlspecialchars($menu['description']); ?></div>
-                                    <?php endif; ?>
-                                </div>
-                            </label>
-                            <div class="menu-qty" style="display: none;">
-                                <label>Qty:</label>
-                                <input type="number" name="menu_qty[<?php echo $menu['id']; ?>]" 
-                                       min="1" max="20" value="1" class="qty-input">
+                
+                <!-- Time & Details -->
+                <div class="bf-form-section">
+                    <div class="bf-form-title">⏰ Schedule & Details</div>
+                    <div class="bf-form-row">
+                        <div class="bf-form-group">
+                            <label class="bf-label">Total Pax *</label>
+                            <input type="number" name="total_pax" id="total_pax" class="bf-input" min="1" max="20" required>
+                        </div>
+                        <div class="bf-form-group">
+                            <label class="bf-label">Time *</label>
+                            <input type="time" name="breakfast_time" id="breakfast_time" class="bf-input" required>
+                        </div>
+                        <div class="bf-form-group">
+                            <label class="bf-label">Date *</label>
+                            <input type="date" name="breakfast_date" id="breakfast_date" class="bf-input" value="<?php echo $today; ?>" required>
+                        </div>
+                    </div>
+                    <div class="bf-form-row">
+                        <div class="bf-form-group" style="grid-column: span 2;">
+                            <label class="bf-label">Location *</label>
+                            <div class="bf-radio-group">
+                                <label class="bf-radio-label">
+                                    <input type="radio" name="location" value="restaurant" checked>
+                                    🍽️ Restaurant
+                                </label>
+                                <label class="bf-radio-label">
+                                    <input type="radio" name="location" value="room_service">
+                                    🛏️ Room Service
+                                </label>
                             </div>
                         </div>
-                        <?php endforeach; ?>
                     </div>
                 </div>
-                <?php endif; ?>
-            </div>
 
-            <div class="form-group">
-                <label for="special_requests">Special Requests / Notes</label>
-                <textarea name="special_requests" id="special_requests" class="form-textarea" 
-                         rows="3" placeholder="Any allergies, special preparation requests, etc."></textarea>
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" class="btn-submit">
-                    ✓ Create Breakfast Order
-                </button>
-                <button type="reset" class="btn-reset">
-                    ↺ Reset Form
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- TODAY'S BREAKFAST ORDERS SUMMARY -->
-    <div style="margin-top: 3rem;">
-        <h2 style="font-size: 1.5rem; font-weight: 900; margin-bottom: 1.5rem; color: rgba(255, 255, 255, 0.9);">
-            📊 Today's Breakfast Orders
-        </h2>
-        
-        <?php
-        try {
-            $todayOrders = [];
-            $stmt = $pdo->prepare("
-                SELECT bo.*, 
-                       b.booking_code,
-                       r.room_number
-                FROM breakfast_orders bo
-                LEFT JOIN bookings b ON bo.booking_id = b.id
-                LEFT JOIN rooms r ON b.room_id = r.id
-                WHERE bo.breakfast_date = ?
-                ORDER BY bo.breakfast_time ASC, r.room_number ASC
-            ");
-            $stmt->execute([$today]);
-            $todayOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            foreach ($todayOrders as &$order) {
-                $order['menu_items'] = json_decode($order['menu_items'], true) ?: [];
-            }
-        } catch (Exception $e) {
-            error_log("Today's orders query error: " . $e->getMessage());
-            $todayOrders = [];
-        }
-        ?>
-        
-        <?php if (count($todayOrders) > 0): ?>
-        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; overflow: hidden;">
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(139, 92, 246, 0.3));">
-                    <tr>
-                        <th style="padding: 1rem; text-align: left; font-weight: 700; color: rgba(255, 255, 255, 0.9); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">Waktu</th>
-                        <th style="padding: 1rem; text-align: left; font-weight: 700; color: rgba(255, 255, 255, 0.9); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">Guest & Room</th>
-                        <th style="padding: 1rem; text-align: left; font-weight: 700; color: rgba(255, 255, 255, 0.9); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">Menu Items</th>
-                        <th style="padding: 1rem; text-align: left; font-weight: 700; color: rgba(255, 255, 255, 0.9); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">Pax</th>
-                        <th style="padding: 1rem; text-align: left; font-weight: 700; color: rgba(255, 255, 255, 0.9); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">Total</th>
-                        <th style="padding: 1rem; text-align: left; font-weight: 700; color: rgba(255, 255, 255, 0.9); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($todayOrders as $order): ?>
-                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-                        <td style="padding: 1rem; color: rgba(255, 255, 255, 0.8); font-weight: 700;">
-                            🕐 <?php echo date('H:i', strtotime($order['breakfast_time'])); ?>
-                        </td>
-                        <td style="padding: 1rem; color: rgba(255, 255, 255, 0.8);">
-                            <strong><?php echo htmlspecialchars($order['guest_name']); ?></strong>
-                            <?php if (!empty($order['room_number'])): ?>
-                            <br>
-                            <span style="display: inline-block; padding: 0.25rem 0.75rem; background: rgba(99, 102, 241, 0.3); border-radius: 6px; font-weight: 600; font-size: 0.9rem;">🛏️ <?php echo htmlspecialchars($order['room_number']); ?></span>
-                            <?php endif; ?>
-                        </td>
-                        <td style="padding: 1rem; color: rgba(255, 255, 255, 0.8);">
-                            <?php foreach ($order['menu_items'] as $item): ?>
-                            <span style="display: inline-block; padding: 0.25rem 0.75rem; background: rgba(168, 85, 247, 0.2); border-radius: 6px; font-size: 0.85rem; color: rgba(255, 255, 255, 0.8); margin-bottom: 0.25rem; margin-right: 0.25rem;">
-                                <?php echo htmlspecialchars($item['menu_name']); ?>
-                                <?php if ($item['quantity'] > 1): ?> ×<?php echo $item['quantity']; ?><?php endif; ?>
-                            </span>
+                <!-- Menu Selection -->
+                <div class="bf-menu-section">
+                    <div class="bf-form-title">🍽️ Select Menu Items</div>
+                    
+                    <?php if (count($freeMenus) > 0): ?>
+                    <div class="bf-menu-category">
+                        <div class="bf-menu-category-title">✨ Complimentary (Free)</div>
+                        <div class="bf-menu-grid">
+                            <?php foreach ($freeMenus as $menu): ?>
+                            <div class="bf-menu-item">
+                                <label class="bf-menu-checkbox">
+                                    <input type="checkbox" name="menu_items[]" value="<?php echo $menu['id']; ?>">
+                                    <div class="bf-menu-info">
+                                        <div class="bf-menu-name"><?php echo htmlspecialchars($menu['menu_name']); ?></div>
+                                        <span class="bf-menu-cat"><?php echo $menu['category']; ?></span>
+                                    </div>
+                                </label>
+                                <div class="bf-menu-qty">
+                                    <span style="font-size: 0.7rem; color: var(--text-muted);">Qty:</span>
+                                    <input type="number" name="menu_qty[<?php echo $menu['id']; ?>]" min="1" max="20" value="1" class="bf-qty-input">
+                                </div>
+                            </div>
                             <?php endforeach; ?>
-                        </td>
-                        <td style="padding: 1rem; color: rgba(255, 255, 255, 0.8);">
-                            <?php echo (int)$order['total_pax']; ?>
-                        </td>
-                        <td style="padding: 1rem; color: rgba(255, 255, 255, 0.8);">
-                            <?php if ($order['total_price'] > 0): ?>
-                            <strong>Rp <?php echo number_format($order['total_price'], 0, ',', '.'); ?></strong>
-                            <?php else: ?>
-                            <span style="color: rgba(255, 255, 255, 0.5);">Free</span>
-                            <?php endif; ?>
-                        </td>
-                        <td style="padding: 1rem; color: rgba(255, 255, 255, 0.8);">
-                            <span style="display: inline-block; padding: 0.5rem 1rem; background: rgba(249, 115, 22, 0.2); color: #fdba74; border-radius: 8px; font-weight: 600; font-size: 0.9rem;">
-                                ⏳ <?php echo ucfirst($order['order_status']); ?>
-                            </span>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-        <?php else: ?>
-        <div style="text-align: center; padding: 2rem; color: rgba(255, 255, 255, 0.5);">
-            <p style="font-size: 1.1rem;">📭 Belum ada breakfast order untuk hari ini</p>
-            <p style="margin-top: 0.5rem;">Pesanan yang dibuat akan muncul di sini</p>
-        </div>
-        <?php endif; ?>
-    </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
+                    <?php if (count($paidMenus) > 0): ?>
+                    <div class="bf-menu-category">
+                        <div class="bf-menu-category-title">💰 Extra Items (Paid)</div>
+                        <div class="bf-menu-grid">
+                            <?php foreach ($paidMenus as $menu): ?>
+                            <div class="bf-menu-item">
+                                <label class="bf-menu-checkbox">
+                                    <input type="checkbox" name="menu_items[]" value="<?php echo $menu['id']; ?>">
+                                    <div class="bf-menu-info">
+                                        <div class="bf-menu-name"><?php echo htmlspecialchars($menu['menu_name']); ?></div>
+                                        <div class="bf-menu-price">Rp <?php echo number_format($menu['price'], 0, ',', '.'); ?></div>
+                                        <span class="bf-menu-cat"><?php echo $menu['category']; ?></span>
+                                    </div>
+                                </label>
+                                <div class="bf-menu-qty">
+                                    <span style="font-size: 0.7rem; color: var(--text-muted);">Qty:</span>
+                                    <input type="number" name="menu_qty[<?php echo $menu['id']; ?>]" min="1" max="20" value="1" class="bf-qty-input">
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Notes -->
+                <div class="bf-form-section">
+                    <div class="bf-form-title">📝 Notes</div>
+                    <textarea name="special_requests" id="special_requests" class="bf-textarea" 
+                              placeholder="Allergies, special preparation, etc."></textarea>
+                </div>
+
+                <div class="bf-actions">
+                    <button type="submit" class="bf-btn-submit">✓ Create Order</button>
+                    <button type="reset" class="bf-btn-reset">↺ Reset</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sidebar - Today's Orders -->
+        <div class="bf-sidebar">
+            <div class="bf-sidebar-title">📊 Today's Orders</div>
+            
+            <?php
+            try {
+                $todayOrders = [];
+                $stmt = $pdo->prepare("
+                    SELECT bo.*, b.booking_code, r.room_number as actual_room
+                    FROM breakfast_orders bo
+                    LEFT JOIN bookings b ON bo.booking_id = b.id
+                    LEFT JOIN rooms r ON b.room_id = r.id
+                    WHERE bo.breakfast_date = ?
+                    ORDER BY bo.breakfast_time ASC
+                ");
+                $stmt->execute([$today]);
+                $todayOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                foreach ($todayOrders as &$order) {
+                    $order['menu_items'] = json_decode($order['menu_items'], true) ?: [];
+                }
+            } catch (Exception $e) {
+                $todayOrders = [];
+            }
+            
+            if (count($todayOrders) > 0):
+                foreach ($todayOrders as $order):
+            ?>
+            <div class="bf-order-item">
+                <div class="bf-order-header">
+                    <span class="bf-order-time">🕐 <?php echo date('H:i', strtotime($order['breakfast_time'])); ?></span>
+                    <span class="bf-order-pax"><?php echo $order['total_pax']; ?> pax</span>
+                </div>
+                <div class="bf-order-guest"><?php echo htmlspecialchars($order['guest_name']); ?></div>
+                <?php if (!empty($order['room_number']) || !empty($order['actual_room'])): ?>
+                <div class="bf-order-room">🛏️ Room <?php echo htmlspecialchars($order['room_number'] ?: $order['actual_room']); ?></div>
+                <?php endif; ?>
+                <div class="bf-order-menus">
+                    <?php foreach (array_slice($order['menu_items'], 0, 3) as $item): ?>
+                    <span class="bf-order-menu-tag">
+                        <?php echo htmlspecialchars($item['menu_name']); ?>
+                        <?php if ($item['quantity'] > 1): ?>×<?php echo $item['quantity']; ?><?php endif; ?>
+                    </span>
+                    <?php endforeach; ?>
+                    <?php if (count($order['menu_items']) > 3): ?>
+                    <span class="bf-order-menu-tag">+<?php echo count($order['menu_items']) - 3; ?> more</span>
+                    <?php endif; ?>
+                </div>
+                <div class="bf-order-footer">
+                    <span class="bf-order-price">
+                        <?php echo $order['total_price'] > 0 ? 'Rp ' . number_format($order['total_price'], 0, ',', '.') : 'Free'; ?>
+                    </span>
+                    <span class="bf-order-status <?php echo $order['order_status']; ?>">
+                        <?php echo ucfirst($order['order_status']); ?>
+                    </span>
+                </div>
+            </div>
+            <?php 
+                endforeach;
+            else: 
+            ?>
+            <div class="bf-empty">
+                <div class="bf-empty-icon">📭</div>
+                <p style="font-size: 0.8rem;">No orders today</p>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -831,8 +916,8 @@ function fillGuestInfo(select) {
 }
 
 function toggleQuantity(checkbox) {
-    const menuItem = checkbox.closest('.menu-item');
-    const qtyDiv = menuItem.querySelector('.menu-qty');
+    const menuItem = checkbox.closest('.bf-menu-item');
+    const qtyDiv = menuItem.querySelector('.bf-menu-qty');
     
     if (checkbox.checked) {
         qtyDiv.style.display = 'flex';
