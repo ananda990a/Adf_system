@@ -399,114 +399,242 @@ require_once __DIR__ . '/includes/header.php';
         font-size: 0.8rem;
     }
     
-    /* Compact form elements */
+    /* Ultra compact form elements */
     .form-control {
-        padding: 0.4rem 0.6rem;
-        font-size: 0.8rem;
-        border-radius: 4px;
+        padding: 0.3rem 0.4rem !important;
+        font-size: 0.7rem !important;
+        border-radius: 3px !important;
+        border: 1px solid #ddd !important;
+        height: auto !important;
+        min-height: 28px !important;
+    }
+    
+    .form-label {
+        font-size: 0.7rem !important;
+        font-weight: 500 !important;
+        margin-bottom: 0.2rem !important;
+    }
+    
+    .form-text {
+        font-size: 0.6rem !important;
+        margin-top: 0.2rem !important;
     }
     
     .btn {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.8rem;
-        border-radius: 4px;
+        padding: 0.3rem 0.6rem !important;
+        font-size: 0.7rem !important;
+        border-radius: 3px !important;
+        line-height: 1.2 !important;
     }
     
     .btn-sm {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem !important;
+        font-size: 0.6rem !important;
     }
     
-    /* Compact spacing */
+    /* Ultra compact spacing */
     .mb-3 {
-        margin-bottom: 0.6rem !important;
+        margin-bottom: 0.4rem !important;
     }
     
     .mb-4 {
-        margin-bottom: 0.8rem !important;
+        margin-bottom: 0.6rem !important;
     }
     
-    /* Smaller alert boxes */
+    .mb-1 {
+        margin-bottom: 0.2rem !important;
+    }
+    
+    .me-1, .me-2 {
+        margin-right: 0.2rem !important;
+    }
+    
+    .mt-1, .mt-2 {
+        margin-top: 0.2rem !important;
+    }
+    
+    /* Ultra compact alert boxes */
     .alert {
-        padding: 0.6rem 0.8rem;
-        font-size: 0.8rem;
+        padding: 0.4rem 0.6rem !important;
+        font-size: 0.7rem !important;
+        margin-bottom: 0.4rem !important;
     }
     
-    /* Smaller headings in developer panel */
+    /* Ultra compact headings */
     h4 {
-        font-size: 1.1rem;
+        font-size: 0.9rem !important;
+        margin-bottom: 0.2rem !important;
     }
     
     h5 {
-        font-size: 0.9rem;
+        font-size: 0.75rem !important;
     }
     
-    /* Compact text */
+    /* Ultra compact text */
     .text-muted {
-        font-size: 0.7rem !important;
+        font-size: 0.6rem !important;
     }
     
-    /* Compact checkboxes and form checks */
+    /* Ultra compact checkboxes */
     .form-check {
-        margin-bottom: 0.4rem;
+        margin-bottom: 0.3rem !important;
+        padding-left: 1.2rem !important;
     }
     
     .form-check-label {
-        font-size: 0.8rem;
-        padding-left: 0.3rem;
+        font-size: 0.7rem !important;
+        padding-left: 0.2rem !important;
     }
     
     .form-check-input {
-        margin-top: 0.2rem;
+        margin-top: 0.1rem !important;
     }
     
-    /* Reset data specific styling */
+    /* Page header compact */
+    .justify-content-between .btn {
+        font-size: 0.65rem !important;
+        padding: 0.25rem 0.5rem !important;
+    }
+    
+    /* Icon sizes */
+    .bi {
+        font-size: 0.7rem !important;
+    }
+    
+    .settings-card-header .bi {
+        font-size: 0.6rem !important;
+    }
+    
+    /* Reset data grid ultra compact */
     .reset-data-grid {
-        gap: 0.4rem;
+        gap: 0.2rem !important;
     }
     
     .reset-data-grid .col-md-6 {
-        padding: 0.2rem;
+        padding: 0.1rem !important;
+    }
+    
+    /* Ultra compact current value */
+    .current-value {
+        background: #f8f9fa !important;
+        border-left: 2px solid var(--dev-primary) !important;
+        padding: 0.3rem 0.5rem !important;
+        border-radius: 0 3px 3px 0 !important;
+        margin-top: 0.4rem !important;
+    }
+    
+    .current-value small {
+        color: #888 !important;
+        font-size: 0.6rem !important;
+    }
+    
+    .current-value strong {
+        display: block !important;
+        color: #333 !important;
+        margin-top: 0.1rem !important;
+        font-size: 0.7rem !important;
     }
     
     /* Ultra compact container */
     .container-fluid {
-        padding: 1rem 0.8rem !important;
-        max-width: 95% !important;
+        padding: 0.5rem 0.6rem !important;
+        max-width: 90% !important;
     }
     
     /* Compact rows and columns */
     .row {
-        margin: 0 -0.3rem;
+        margin: 0 -0.2rem;
     }
     
     .col-lg-6 {
-        padding: 0 0.3rem;
+        padding: 0 0.2rem;
     }
     
     /* Smaller page header */
     .d-flex.justify-content-between {
-        margin-bottom: 0.8rem !important;
+        margin-bottom: 0.5rem !important;
     }
     
     /* More compact layout */
     .py-4 {
-        padding-top: 0.8rem !important;
-        padding-bottom: 0.8rem !important;
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
     }
     
     /* Tighter card spacing */
     .settings-card + .settings-card {
-        margin-top: 0.5rem;
+        margin-top: 0.3rem;
     }
     
     /* Compact grid system */
     @media (min-width: 992px) {
         .col-lg-6:first-child {
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.3rem;
+        }
+        .col-lg-6 {
+            max-width: 48%;
+            flex: 0 0 48%;
         }
     }
-</style>
+    
+    /* Ultra compact cards */
+    .settings-card {
+        background: white;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        margin-bottom: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .settings-card-header {
+        padding: 0.4rem 0.6rem;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    
+    .settings-card-header .icon {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+    }
+    
+    .settings-card-header h5 {
+        margin: 0;
+        font-weight: 600;
+        font-size: 0.75rem;
+        line-height: 1.2;
+    }
+    
+    .settings-card-header small {
+        color: #888;
+        font-weight: 400;
+        font-size: 0.6rem;
+    }
+    
+    .settings-card-body {
+        padding: 0.6rem;
+    }
+    
+    /* Ultra compact preview boxes */
+    .preview-box {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+        padding: 0.5rem;
+        text-align: center;
+    }
+    
+    .preview-box img {
+        max-width: 60px;
+        max-height: 60px;
+        border-radius: 4px;
+    }
 
 <div class="container-fluid py-4">
     <!-- Page Header -->
