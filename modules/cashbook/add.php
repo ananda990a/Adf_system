@@ -20,15 +20,10 @@ $pageSubtitle = 'Input Transaksi Baru';
 // Get divisions and categories
 $divisions = $db->fetchAll("SELECT * FROM divisions WHERE is_active = 1 ORDER BY division_name");
 
-// Get business ID for cash accounts lookup
-$businessId = $_SESSION['business_id'] ?? null;
-$cashAccounts = [];
-if ($businessId) {
-    $cashAccounts = $db->fetchAll(
-        "SELECT id, account_name, account_type FROM cash_accounts WHERE business_id = ? AND is_active = 1 ORDER BY is_default_account DESC, account_name",
-        [$businessId]
-    );
-}
+// Get ALL cash accounts (no business filter for now - simple approach)
+$cashAccounts = $db->fetchAll(
+    "SELECT id, account_name, account_type FROM cash_accounts WHERE is_active = 1 ORDER BY is_default_account DESC, account_name"
+);
 
 // Handle form submission
 if (isPost()) {
@@ -276,7 +271,6 @@ include '../../includes/header.php';
                 </div>
                 
                 <!-- Cash Account Selection -->
-                <?php if (!empty($cashAccounts)): ?>
                 <div class="compact-form-group" style="margin-bottom: 0.75rem;">
                     <label class="form-label" style="font-size: 0.75rem; font-weight: 600; margin-bottom: 0.375rem;">Akun Kas</label>
                     <select name="cash_account_id" class="form-control" style="height: 34px; font-size: 0.813rem;">
@@ -291,7 +285,6 @@ include '../../includes/header.php';
                         💡 Pilih akun untuk tracking yang lebih detail
                     </div>
                 </div>
-                <?php endif; ?>
                 
                 <!-- Payment Method -->
                 <div class="compact-form-group" style="margin-bottom: 0.75rem;">

@@ -138,15 +138,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $divisions = $db->fetchAll("SELECT * FROM divisions WHERE is_active = 1 ORDER BY division_name");
 $categories = $db->fetchAll("SELECT * FROM categories ORDER BY category_name");
 
-// Get cash accounts for business
-$businessId = $_SESSION['business_id'] ?? null;
-$cashAccounts = [];
-if ($businessId) {
-    $cashAccounts = $db->fetchAll(
-        "SELECT id, account_name, account_type FROM cash_accounts WHERE business_id = ? AND is_active = 1 ORDER BY is_default_account DESC, account_name",
-        [$businessId]
-    );
-}
+// Get ALL cash accounts
+$cashAccounts = $db->fetchAll(
+    "SELECT id, account_name, account_type FROM cash_accounts WHERE is_active = 1 ORDER BY is_default_account DESC, account_name"
+);
 
 include '../../includes/header.php';
 ?>
@@ -247,7 +242,6 @@ include '../../includes/header.php';
             </div>
 
             <!-- Cash Account -->
-            <?php if (!empty($cashAccounts)): ?>
             <div class="form-group">
                 <label class="form-label">Akun Kas</label>
                 <select name="cash_account_id" class="form-control">
@@ -261,7 +255,6 @@ include '../../includes/header.php';
                 </select>
                 <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">💡 Pilih akun untuk tracking yang lebih detail</small>
             </div>
-            <?php endif; ?>
 
             <!-- Payment Method -->
             <div class="form-group">
