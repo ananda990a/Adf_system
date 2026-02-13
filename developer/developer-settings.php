@@ -49,6 +49,34 @@ preg_match("/define\('DEVELOPER_LOGO',\s*'([^']*)'\);/", $configContent, $logoMa
 $currentDevName = $nameMatch[1] ?? 'DevTeam Studio';
 $currentDevLogo = $logoMatch[1] ?? 'assets/img/developer-logo.png';
 
+// Get businesses for reset data functionality
+$businesses = [];
+try {
+    $businessResult = $db->fetchAll("SELECT business_id, business_name, business_type FROM businesses WHERE status = 'active' ORDER BY business_name");
+    foreach ($businessResult as $business) {
+        $businesses[$business['business_id']] = $business;
+    }
+} catch (Exception $e) {
+    // If no businesses table, use defaults
+    $businesses = [
+        '1' => ['business_id' => '1', 'business_name' => 'Default Business', 'business_type' => 'hotel'],
+        '2' => ['business_id' => '2', 'business_name' => 'Demo Restaurant', 'business_type' => 'restaurant']
+    ];
+}
+
+// Function to get business display name
+function getBusinessDisplayName($businessId) {
+    global $businesses;
+    if (isset($businesses[$businessId])) {
+        $b = $businesses[$businessId];
+        return $b['business_name'] . ' (' . ucfirst($b['business_type']) . ')';
+    }
+    return 'Business #' . $businessId;
+}
+
+$selectedBusiness = $_POST['reset_business_id'] ?? (array_key_first($businesses) ?: '1');
+$resetResult = null;
+
 // Handle form submission for name
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['developer_name'])) {
     $newName = trim($_POST['developer_name']);
@@ -215,6 +243,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['footer_copyright'])) 
     $success = 'Teks footer berhasil diupdate!';
     $currentFooterCopyright = $copyright;
     $currentFooterVersion = $version;
+}
+
+// Handle reset data submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_data_submit'])) {
+    $businessId = $_POST['reset_business_id'] ?? '';
+    $resetTypes = $_POST['reset_type'] ?? [];
+    
+    if (!empty($businessId) && !empty($resetTypes)) {
+        $resetResult = [];
+        
+        foreach ($resetTypes as $type) {
+            // Call reset API for each type
+            $postData = json_encode([
+                'business_id' => $businessId,
+                'reset_type' => $type
+            ]);
+            
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'POST',
+                    'header' => 'Content-Type: application/json',
+                    'content' => $postData
+                ]
+            ]);
+            
+            $response = @file_get_contents(BASE_URL . '/api/reset-business-data.php', false, $context);
+            $httpCode = 200; // Default success
+            
+            $resetResult[$type] = [
+                'http' => $httpCode,
+                'response' => $response ?: json_encode(['success' => false, 'message' => 'No response from API'])
+            ];
+        }
+        
+        $success = 'Reset data telah dijalankan untuk ' . count($resetTypes) . ' jenis data pada ' . getBusinessDisplayName($businessId) . '. Lihat hasil detail di bawah.';
+    } else {
+        $error = 'Pilih bisnis dan minimal 1 jenis data untuk direset.';
+    }
 }
 
 // Handle logo upload
@@ -699,6 +765,215 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
     
+    <!-- Reset Data Business Section --> 
+    <div class="settings-card" style="background: linear-gradient(135deg, rgba(220,38,38,0.05), rgba(239,68,68,0.05)); border: 2px solid rgba(220,38,38,0.1);">
+        <div class="settings-card-header">
+            <div class="icon" style="background: rgba(220,38,38,0.15); color: #dc2626;">
+                <i class="bi bi-trash"></i>
+            </div>
+            <div>
+                <h5>🗑️ Reset Data Business</h5>
+                <small>Hapus data tertentu untuk bisnis terpilih</small>
+            </div>
+        </div>
+        <div class="settings-card-body">
+            <!-- Warning Notice -->
+            <div class="alert alert-danger" style="border-left: 4px solid #dc2626;">
+                <div class="d-flex align-items-start">
+                    <i class="bi bi-exclamation-triangle-fill text-danger me-3" style="font-size: 1.2rem; margin-top: 0.1rem;"></i>
+                    <div>
+                        <h6 class="mb-1">⚠️ PERINGATAN - Reset Data Permanen</h6>
+                        <p class="mb-0" style="font-size: 0.875rem;">
+                            Data yang dihapus <strong>tidak dapat dikembalikan!</strong> Pastikan sudah backup database sebelum melakukan reset.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="POST" onsubmit="return confirmReset();" style="margin-top: 1.5rem;">
+                <div class="row g-3">
+                    <!-- Business Selection -->
+                    <div class="col-md-6">
+                        <label class="form-label">Pilih Bisnis</label>
+                        <select name="reset_business_id" class="form-select" required>
+                            <?php if (!empty($businesses)): ?>
+                                <?php foreach ($businesses as $bid => $b): ?>
+                                    <option value="<?php echo htmlspecialchars($bid); ?>" <?php if ($selectedBusiness == $bid) echo 'selected'; ?>>
+                                        <?php echo getBusinessDisplayName($bid); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <option value="1">Default Business (Hotel)</option>
+                                <option value="2">Demo Restaurant</option>
+                            <?php endif; ?>
+                        </select>
+                    </div>
+                    
+                    <!-- Reset Button Column -->
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button type="submit" name="reset_data_submit" class="btn btn-danger w-100" style="font-weight: 600;">
+                            <i class="bi bi-trash me-1"></i>
+                            Reset Data yang Dipilih
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Data Type Selection -->  
+                <div style="margin-top: 1.5rem;">
+                    <label class="form-label">Pilih Data yang Direset</label>
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="accounting" id="reset_accounting">
+                                <label class="form-check-label" for="reset_accounting">
+                                    💰 Data Accounting
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="bookings" id="reset_bookings">
+                                <label class="form-check-label" for="reset_bookings">
+                                    📅 Data Booking/Reservasi
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="invoices" id="reset_invoices">
+                                <label class="form-check-label" for="reset_invoices">
+                                    🧾 Data Invoice
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="procurement" id="reset_procurement">
+                                <label class="form-check-label" for="reset_procurement">
+                                    📋 Data PO & Procurement
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="inventory" id="reset_inventory">
+                                <label class="form-check-label" for="reset_inventory">
+                                    📦 Data Inventory
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="employees" id="reset_employees">
+                                <label class="form-check-label" for="reset_employees">
+                                    👥 Data Karyawan
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="users" id="reset_users">
+                                <label class="form-check-label" for="reset_users">
+                                    🔐 Data User (non-admin)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="guests" id="reset_guests">
+                                <label class="form-check-label" for="reset_guests">
+                                    🏨 Data Tamu
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="menu" id="reset_menu">
+                                <label class="form-check-label" for="reset_menu">
+                                    🍽️ Data Menu
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="orders" id="reset_orders">
+                                <label class="form-check-label" for="reset_orders">
+                                    🛒 Data Orders
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="reports" id="reset_reports">
+                                <label class="form-check-label" for="reset_reports">
+                                    📊 Data Reports
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="logs" id="reset_logs">
+                                <label class="form-check-label" for="reset_logs">
+                                    📝 Data Logs
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+            
+            <!-- Reset Results Display -->
+            <?php if ($resetResult !== null): ?>
+                <div class="mt-4 p-3" style="background: rgba(59,130,246,0.05); border-radius: 0.5rem; border-left: 3px solid #3b82f6;">
+                    <h6 class="text-primary mb-3">📊 Hasil Reset Data:</h6>
+                    <div class="row">
+                        <?php foreach ($resetResult as $type => $res): 
+                            $data = json_decode($res['response'], true);
+                            $isSuccess = $res['http'] == 200 && !empty($data['success']);
+                            $message = $data['message'] ?? 'No response';
+                        ?>
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex align-items-center">
+                                    <span class="badge <?php echo $isSuccess ? 'bg-success' : 'bg-danger'; ?> me-2">
+                                        <?php echo $isSuccess ? '✅' : '❌'; ?>
+                                    </span>
+                                    <small>
+                                        <strong><?php echo htmlspecialchars($type); ?>:</strong> 
+                                        <?php echo htmlspecialchars($message); ?>
+                                    </small>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
 </div>
+    
+<script>
+function confirmReset() {
+    const checkboxes = document.querySelectorAll('input[name="reset_type[]"]:checked');
+    const businessSelect = document.querySelector('select[name="reset_business_id"]');
+    
+    if (checkboxes.length === 0) {
+        alert('⚠️ Pilih minimal 1 jenis data yang ingin direset!');
+        return false;
+    }
+    
+    const businessName = businessSelect.options[businessSelect.selectedIndex].text;
+    const dataTypes = Array.from(checkboxes).map(cb => cb.nextElementSibling.textContent.trim()).join('\\n• ');
+    
+    const confirmMessage = 
+        `⚠️ KONFIRMASI RESET DATA\\n\\n` +
+        `Bisnis: ${businessName}\\n\\n` +
+        `Data yang akan dihapus:\\n• ${dataTypes}\\n\\n` +
+        `Data akan dihapus PERMANEN dan TIDAK DAPAT dikembalikan!\\n\\n` +
+        `Apakah Anda yakin ingin melanjutkan?`;
+        
+    return confirm(confirmMessage);
+}
+</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
