@@ -635,6 +635,7 @@ require_once __DIR__ . '/includes/header.php';
         max-height: 60px;
         border-radius: 4px;
     }
+</style>
 
 <div class="container-fluid py-4">
     <!-- Page Header -->
