@@ -333,81 +333,242 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <style>
-    .settings-card {
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-        margin-bottom: 0.8rem;
-        overflow: hidden;
-    }
-    .settings-card-header {
-        padding: 0.6rem 0.9rem;
-        border-bottom: 1px solid #eee;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    .settings-card-header .icon {
-        width: 26px;
-        height: 26px;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.8rem;
-    }
-    .settings-card-header h5 {
-        margin: 0;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-    .settings-card-header small {
-        color: #888;
-        font-weight: 400;
-        font-size: 0.7rem;
-    }
-    .settings-card-body {
-        padding: 0.9rem;
-    }
-    .preview-box {
-        background: #f8f9fa;
-        border: 1px dashed #dee2e6;
-        border-radius: 6px;
-        padding: 0.8rem;
-        text-align: center;
-    }
-    .preview-box img {
-        max-width: 90px;
-        max-height: 90px;
-        border-radius: 6px;
-    }
-    .current-value {
-        background: #f8f9fa;
-        border-left: 2px solid var(--dev-primary);
-        padding: 0.5rem 0.7rem;
-        border-radius: 0 4px 4px 0;
-        margin-top: 0.6rem;
-    }
-    .current-value small {
-        color: #888;
-        font-size: 0.65rem;
-    }
-    .current-value strong {
-        display: block;
-        color: #333;
-        margin-top: 0.2rem;
-        font-size: 0.8rem;
+    /* ULTRA COMPACT CSS - Force Override Everything */
+    .container-fluid {
+        padding: 0.3rem 0.5rem !important;
+        max-width: 85% !important;
     }
     
-    /* Ultra compact form elements */
-    .form-control {
-        padding: 0.3rem 0.4rem !important;
-        font-size: 0.7rem !important;
+    .row {
+        margin: 0 -0.15rem !important;
+    }
+    
+    .col-lg-6 {
+        padding: 0 0.15rem !important;
+    }
+    
+    .py-4 {
+        padding-top: 0.3rem !important;
+        padding-bottom: 0.3rem !important;
+    }
+    
+    .d-flex.justify-content-between {
+        margin-bottom: 0.3rem !important;
+    }
+    
+    /* Ultra Compact Cards */
+    .settings-card {
+        background: white !important;
+        border-radius: 4px !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+        margin-bottom: 0.3rem !important;
+        overflow: hidden !important;
+    }
+    
+    .settings-card-header {
+        padding: 0.25rem 0.4rem !important;
+        border-bottom: 1px solid #f0f0f0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.25rem !important;
+    }
+    
+    .settings-card-header .icon {
+        width: 16px !important;
+        height: 16px !important;
+        border-radius: 3px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 0.55rem !important;
+    }
+    
+    .settings-card-header h5 {
+        margin: 0 !important;
+        font-weight: 500 !important;
+        font-size: 0.65rem !important;
+        line-height: 1.1 !important;
+    }
+    
+    .settings-card-header small {
+        color: #888 !important;
+        font-weight: 400 !important;
+        font-size: 0.5rem !important;
+    }
+    
+    .settings-card-body {
+        padding: 0.4rem !important;
+    }
+    
+    /* Ultra Compact Preview */
+    .preview-box {
+        background: #f8f9fa !important;
+        border: 1px solid #e9ecef !important;
+        border-radius: 3px !important;
+        padding: 0.3rem !important;
+        text-align: center !important;
+        margin-bottom: 0.3rem !important;
+    }
+    
+    .preview-box img {
+        max-width: 40px !important;
+        max-height: 40px !important;
+        border-radius: 3px !important;
+    }
+    
+    /* Ultra Compact Forms */
+    .form-control, .form-select {
+        padding: 0.2rem 0.3rem !important;
+        font-size: 0.6rem !important;
         border-radius: 3px !important;
         border: 1px solid #ddd !important;
         height: auto !important;
-        min-height: 28px !important;
+        min-height: 20px !important;
+        line-height: 1.2 !important;
     }
+    
+    .form-label {
+        font-size: 0.6rem !important;
+        font-weight: 500 !important;
+        margin-bottom: 0.1rem !important;
+    }
+    
+    .form-text {
+        font-size: 0.5rem !important;
+        margin-top: 0.1rem !important;
+    }
+    
+    .btn {
+        padding: 0.2rem 0.4rem !important;
+        font-size: 0.6rem !important;
+        border-radius: 3px !important;
+        line-height: 1.2 !important;
+    }
+    
+    .btn-sm {
+        padding: 0.15rem 0.25rem !important;
+        font-size: 0.5rem !important;
+    }
+    
+    /* Ultra Compact Spacing */
+    .mb-3 {
+        margin-bottom: 0.2rem !important;
+    }
+    
+    .mb-4 {
+        margin-bottom: 0.3rem !important;
+    }
+    
+    .mb-1 {
+        margin-bottom: 0.1rem !important;
+    }
+    
+    .me-1, .me-2 {
+        margin-right: 0.1rem !important;
+    }
+    
+    .mt-1, .mt-2 {
+        margin-top: 0.1rem !important;
+    }
+    
+    /* Ultra Compact Alerts */
+    .alert {
+        padding: 0.25rem 0.4rem !important;
+        font-size: 0.6rem !important;
+        margin-bottom: 0.2rem !important;
+    }
+    
+    /* Ultra Compact Typography */
+    h4 {
+        font-size: 0.75rem !important;
+        margin-bottom: 0.1rem !important;
+    }
+    
+    h5 {
+        font-size: 0.65rem !important;
+    }
+    
+    h6 {
+        font-size: 0.6rem !important;
+    }
+    
+    .text-muted {
+        font-size: 0.5rem !important;
+    }
+    
+    /* Ultra Compact Checkboxes */
+    .form-check {
+        margin-bottom: 0.15rem !important;
+        padding-left: 1rem !important;
+    }
+    
+    .form-check-label {
+        font-size: 0.55rem !important;
+        padding-left: 0.1rem !important;
+    }
+    
+    .form-check-input {
+        margin-top: 0.05rem !important;
+        transform: scale(0.8) !important;
+    }
+    
+    /* Ultra Compact Current Value */
+    .current-value {
+        background: #f8f9fa !important;
+        border-left: 2px solid var(--dev-primary) !important;
+        padding: 0.2rem 0.3rem !important;
+        border-radius: 0 2px 2px 0 !important;
+        margin-top: 0.2rem !important;
+    }
+    
+    .current-value small {
+        color: #888 !important;
+        font-size: 0.5rem !important;
+    }
+    
+    .current-value strong {
+        display: block !important;
+        color: #333 !important;
+        margin-top: 0.05rem !important;
+        font-size: 0.6rem !important;
+    }
+    
+    /* Ultra Compact Icons */
+    .bi {
+        font-size: 0.6rem !important;
+    }
+    
+    .settings-card-header .bi {
+        font-size: 0.5rem !important;
+    }
+    
+    /* Grid Ultra Compact */
+    @media (min-width: 992px) {
+        .col-lg-6 {
+            max-width: 49% !important;
+            flex: 0 0 49% !important;
+        }
+    }
+    
+    /* Reset Data Grid */
+    .reset-data-grid {
+        gap: 0.1rem !important;
+    }
+    
+    .reset-data-grid .col-md-6,
+    .reset-data-grid .col-md-3 {
+        padding: 0.05rem !important;
+    }
+    
+    /* Page Header */
+    .justify-content-between .btn {
+        font-size: 0.55rem !important;
+        padding: 0.15rem 0.3rem !important;
+    }
+</style>
+
+<div class="container-fluid py-4">
+
     
     .form-label {
         font-size: 0.7rem !important;
