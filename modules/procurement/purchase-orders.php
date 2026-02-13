@@ -35,18 +35,23 @@ include '../../includes/header.php';
 ?>
 
 <?php if (isset($_SESSION['success'])): ?>
-    <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-left: 4px solid #10b981; padding: 1.25rem 1.5rem; border-radius: 0.75rem; margin-bottom: 1.5rem; box-shadow: 0 4px 12px rgba(16,185,129,0.15); animation: slideInDown 0.5s ease-out;">
-        <div style="display: flex; align-items: center; gap: 1rem;">
-            <div style="width: 48px; height: 48px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <i data-feather="check-circle" style="width: 24px; height: 24px; color: white;"></i>
+    <!-- Success Popup Modal -->
+    <div id="successPopup" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); animation: fadeIn 0.3s ease-out;">
+        <div style="background: white; border-radius: 1rem; padding: 2rem; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); animation: scaleIn 0.3s ease-out;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem;">
+                <i data-feather="check" style="width: 40px; height: 40px; color: white; stroke-width: 3;"></i>
             </div>
-            <div style="flex: 1;">
-                <div style="font-weight: 700; color: #065f46; font-size: 1.125rem; margin-bottom: 0.25rem;">✅ Berhasil!</div>
-                <div style="color: #047857; font-size: 0.95rem;"><?php echo $_SESSION['success']; unset($_SESSION['success']); ?></div>
-            </div>
-            <button onclick="this.parentElement.parentElement.style.display='none'" style="background: none; border: none; color: #059669; font-size: 1.5rem; cursor: pointer; padding: 0; width: 32px; height: 32px;">&times;</button>
+            <h3 style="font-size: 1.5rem; font-weight: 700; color: #065f46; margin-bottom: 0.75rem;">Berhasil!</h3>
+            <div style="color: #047857; font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.6;"><?php echo $_SESSION['success']; unset($_SESSION['success']); ?></div>
+            <button onclick="document.getElementById('successPopup').style.display='none'" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 600; font-size: 1rem; cursor: pointer;">
+                OK, Mengerti
+            </button>
         </div>
     </div>
+    <style>
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+    </style>
 <?php endif; ?>
 
 <?php if (isset($_SESSION['error'])): ?>

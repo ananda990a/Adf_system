@@ -264,6 +264,30 @@ include '../../includes/header.php';
                     </div>
                 </div>
             </label>
+            
+            <label class="checkbox-label">
+                <input type="checkbox" name="reset_type" value="invoices">
+                <div>
+                    <div style="font-weight: 600; font-size: 0.875rem; color: var(--text-primary);">
+                        Data Invoice
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">
+                        Hapus semua data invoice penjualan
+                    </div>
+                </div>
+            </label>
+            
+            <label class="checkbox-label">
+                <input type="checkbox" name="reset_type" value="procurement">
+                <div>
+                    <div style="font-weight: 600; font-size: 0.875rem; color: var(--text-primary);">
+                        Data PO & Procurement
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">
+                        Hapus semua Purchase Order dan penerimaan barang
+                    </div>
+                </div>
+            </label>
         </div>
         
         <div class="warning-box">
