@@ -20,6 +20,16 @@ $pageSubtitle = 'Input Transaksi Baru';
 // Get divisions and categories
 $divisions = $db->fetchAll("SELECT * FROM divisions WHERE is_active = 1 ORDER BY division_name");
 
+// Get business ID for cash accounts lookup
+$businessId = $_SESSION['business_id'] ?? null;
+$cashAccounts = [];
+if ($businessId) {
+    $cashAccounts = $db->fetchAll(
+        "SELECT id, account_name, account_type FROM cash_accounts WHERE business_id = ? AND is_active = 1 ORDER BY is_default_account DESC, account_name",
+        [$businessId]
+    );
+}
+
 // Handle form submission
 if (isPost()) {
     $transactionDate = sanitize(getPost('transaction_date'));
@@ -30,6 +40,7 @@ if (isPost()) {
     $amount = str_replace(['.', ','], '', getPost('amount')); // Remove formatting
     $description = sanitize(getPost('description'));
     $paymentMethod = sanitize(getPost('payment_method'));
+    $cashAccountId = sanitize(getPost('cash_account_id')) ?: null; // Optional: can be null for now
     
     // Validation
     if (empty($transactionDate) || empty($divisionId) || empty($categoryName) || empty($amount)) {
@@ -66,6 +77,7 @@ if (isPost()) {
                 'amount' => $amount,
                 'description' => $description,
                 'payment_method' => $paymentMethod,
+                'cash_account_id' => $cashAccountId,
                 'created_by' => $_SESSION['user_id'],
                 'source_type' => 'manual',
                 'is_editable' => 1
@@ -262,6 +274,24 @@ include '../../includes/header.php';
                         </label>
                     </div>
                 </div>
+                
+                <!-- Cash Account Selection -->
+                <?php if (!empty($cashAccounts)): ?>
+                <div class="compact-form-group" style="margin-bottom: 0.75rem;">
+                    <label class="form-label" style="font-size: 0.75rem; font-weight: 600; margin-bottom: 0.375rem;">Akun Kas</label>
+                    <select name="cash_account_id" class="form-control" style="height: 34px; font-size: 0.813rem;">
+                        <option value="">-- Pilih Akun Kas (opsional) --</option>
+                        <?php foreach ($cashAccounts as $acc): ?>
+                            <option value="<?php echo htmlspecialchars($acc['id']); ?>">
+                                <?php echo htmlspecialchars($acc['account_name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">
+                        💡 Pilih akun untuk tracking yang lebih detail
+                    </div>
+                </div>
+                <?php endif; ?>
                 
                 <!-- Payment Method -->
                 <div class="compact-form-group" style="margin-bottom: 0.75rem;">

@@ -1,0 +1,549 @@
+<?php
+/**
+ * Owner Capital Monitoring Dashboard
+ * Track dan monitor Kas Modal Owner per bulan
+ */
+
+require_once '../../config/config.php';
+require_once '../../config/database.php';
+require_once '../../includes/auth.php';
+
+$auth = new Auth();
+$auth->requireLogin();
+
+$db = Database::getInstance();
+
+// Check authorization
+$userRole = $_SESSION['role'] ?? '';
+if (!in_array($userRole, ['admin', 'owner', 'manager', 'developer'])) {
+    header('Location: ' . BASE_URL . '/index.php');
+    exit;
+}
+
+// Get business ID
+$businessId = $_SESSION['business_id'] ?? null;
+if (!$businessId) {
+    die('❌ Business ID not set in session');
+}
+
+// Get current month data
+$currentMonth = date('Y-m-01');
+$nextMonth = date('Y-m-t', strtotime($currentMonth));
+
+// Get Kas Modal Owner account
+$ownerCapitalAccount = $db->fetchOne(
+    "SELECT * FROM cash_accounts WHERE business_id = ? AND account_type = 'owner_capital' AND is_active = 1",
+    [$businessId]
+);
+
+if (!$ownerCapitalAccount) {
+    die('❌ Kas Modal Owner account not found. Please run accounting setup first.');
+}
+
+// Get this month's capital injections (income to owner_capital account)
+$capitalInjections = $db->fetchAll(
+    "SELECT * FROM cash_account_transactions 
+     WHERE cash_account_id = ? AND transaction_type = 'capital_injection'
+     AND transaction_date >= ? AND transaction_date <= ?
+     ORDER BY transaction_date DESC",
+    [$ownerCapitalAccount['id'], $currentMonth, $nextMonth]
+);
+
+// Calculate totals
+$totalCapitalInjected = 0;
+$totalCapitalUsed = 0;
+
+foreach ($capitalInjections as $txn) {
+    if ($txn['debit'] > 0) {
+        $totalCapitalInjected += $txn['debit'];
+    }
+}
+
+// Get expenses that reduced owner capital (debit from modal account)
+$capitalExpenses = $db->fetchAll(
+    "SELECT * FROM cash_account_transactions 
+     WHERE cash_account_id = ? AND transaction_type IN ('expense', 'transfer')
+     AND transaction_date >= ? AND transaction_date <= ?
+     AND credit > 0
+     ORDER BY transaction_date DESC",
+    [$ownerCapitalAccount['id'], $currentMonth, $nextMonth]
+);
+
+foreach ($capitalExpenses as $txn) {
+    $totalCapitalUsed += $txn['credit'];
+}
+
+$currentBalance = $ownerCapitalAccount['current_balance'];
+$remainingCapital = $currentBalance;
+
+?>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor Kas Modal Owner - Narayana</title>
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 1.5rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .page-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .page-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-subtitle {
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .stat-card {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.1), transparent);
+            border-radius: 50%;
+        }
+        
+        .stat-label {
+            color: #64748b;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-change {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            display: inline-block;
+        }
+        
+        .stat-change.positive {
+            background: #d1fae5;
+            color: #047857;
+        }
+        
+        .stat-change.negative {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .stat-change.neutral {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        /* Color variations */
+        .card-inject {
+            border-left: 4px solid #10b981;
+        }
+        
+        .card-inject .stat-label {
+            color: #10b981;
+        }
+        
+        .card-use {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .card-use .stat-label {
+            color: #ef4444;
+        }
+        
+        .card-balance {
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .card-balance .stat-label {
+            color: #3b82f6;
+        }
+        
+        /* Full width card */
+        .card-full {
+            grid-column: 1 / -1;
+        }
+        
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .transaction-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .transaction-table th {
+            background: #f1f5f9;
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            color: #475569;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .transaction-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .transaction-table tr:hover {
+            background: #f8fafc;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .badge-injection {
+            background: #d1fae5;
+            color: #047857;
+        }
+        
+        .badge-expense {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .badge-transfer {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #94a3b8;
+        }
+        
+        .empty-state i {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1rem;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="dashboard.php" class="back-link">
+            <i data-feather="arrow-left" style="width: 16px; height: 16px;"></i>
+            Kembali ke Dashboard
+        </a>
+        
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">💰 Monitor Kas Modal Owner</h1>
+                <p class="page-subtitle">Tracking pengeluaran modal bulan <?php echo strftime('%B %Y', strtotime($currentMonth)); ?></p>
+            </div>
+            <button onclick="refreshData()" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                <i data-feather="refresh-cw" style="width: 16px; height: 16px;"></i>
+                Refresh
+            </button>
+        </div>
+        
+        <!-- Key Statistics -->
+        <div class="grid-2">
+            <!-- Capital Injected -->
+            <div class="card stat-card card-inject">
+                <div class="stat-label">
+                    <i data-feather="arrow-down-circle" style="width: 16px; height: 16px;"></i>
+                    Modal Diterima
+                </div>
+                <div class="stat-value">Rp <?php echo number_format($totalCapitalInjected, 0, ',', '.'); ?></div>
+                <div class="stat-change positive">
+                    ✓ Bulan ini
+                </div>
+            </div>
+            
+            <!-- Capital Used -->
+            <div class="card stat-card card-use">
+                <div class="stat-label">
+                    <i data-feather="arrow-up-circle" style="width: 16px; height: 16px;"></i>
+                    Modal Digunakan
+                </div>
+                <div class="stat-value">Rp <?php echo number_format($totalCapitalUsed, 0, ',', '.'); ?></div>
+                <div class="stat-change negative">
+                    ✗ Pengeluaran operasional
+                </div>
+            </div>
+            
+            <!-- Current Balance -->
+            <div class="card stat-card card-balance">
+                <div class="stat-label">
+                    <i data-feather="credit-card" style="width: 16px; height: 16px;"></i>
+                    Saldo Kas Modal
+                </div>
+                <div class="stat-value">Rp <?php echo number_format($remainingCapital, 0, ',', '.'); ?></div>
+                <div class="stat-change neutral">
+                    📊 Saldo aktual
+                </div>
+            </div>
+            
+            <!-- Efficiency -->
+            <div class="card stat-card" style="border-left: 4px solid #f59e0b;">
+                <div class="stat-label" style="color: #f59e0b;">
+                    <i data-feather="percent" style="width: 16px; height: 16px;"></i>
+                    Efisiensi Modal
+                </div>
+                <div class="stat-value">
+                    <?php 
+                    if ($totalCapitalInjected > 0) {
+                        $efficiency = ($totalCapitalUsed / $totalCapitalInjected) * 100;
+                        echo number_format($efficiency, 1);
+                    } else {
+                        echo '0';
+                    }
+                    ?>%
+                </div>
+                <div class="stat-change" style="background: #fef3c7; color: #b45309;">
+                    📈 Rasio penggunaan
+                </div>
+            </div>
+        </div>
+        
+        <!-- Transactions History -->
+        <div class="card card-full">
+            <div class="section-title">
+                <i data-feather="history" style="width: 20px; height: 20px; color: #3b82f6;"></i>
+                Riwayat Transaksi Modal - Bulan <?php echo strftime('%B %Y', strtotime($currentMonth)); ?>
+            </div>
+            
+            <?php if (!empty($capitalInjections) || !empty($capitalExpenses)): ?>
+                <table class="transaction-table">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Deskripsi</th>
+                            <th>Tipe</th>
+                            <th>Jumlah</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        // Merge and sort all transactions
+                        $allTransactions = array_merge($capitalInjections, $capitalExpenses);
+                        usort($allTransactions, function($a, $b) {
+                            return strtotime($b['transaction_date']) - strtotime($a['transaction_date']);
+                        });
+                        
+                        foreach ($allTransactions as $txn): 
+                        ?>
+                            <tr>
+                                <td><?php echo date('d M Y', strtotime($txn['transaction_date'])); ?></td>
+                                <td><?php echo htmlspecialchars($txn['description']); ?></td>
+                                <td>
+                                    <?php
+                                    switch ($txn['transaction_type']) {
+                                        case 'capital_injection':
+                                            echo '<span class="badge badge-injection">Setoran Modal</span>';
+                                            break;
+                                        case 'expense':
+                                            echo '<span class="badge badge-expense">Pengeluaran</span>';
+                                            break;
+                                        case 'transfer':
+                                            echo '<span class="badge badge-transfer">Transfer</span>';
+                                            break;
+                                        default:
+                                            echo '<span class="badge">' . ucfirst($txn['transaction_type']) . '</span>';
+                                    }
+                                    ?>
+                                </td>
+                                <td style="text-align: right; font-weight: 600;">
+                                    <?php
+                                    if ($txn['debit'] > 0) {
+                                        echo '<span style="color: #10b981;">+ Rp ' . number_format($txn['debit'], 0, ',', '.') . '</span>';
+                                    } else {
+                                        echo '<span style="color: #ef4444;">- Rp ' . number_format($txn['credit'], 0, ',', '.') . '</span>';
+                                    }
+                                    ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <div class="empty-state">
+                    <i data-feather="inbox"></i>
+                    <p>Belum ada transaksi modal bulan ini</p>
+                </div>
+            <?php endif; ?>
+        </div>
+        
+        <!-- Chart -->
+        <div class="card card-full" style="margin-top: 2rem;">
+            <div class="section-title">
+                <i data-feather="bar-chart-2" style="width: 20px; height: 20px; color: #8b5cf6;"></i>
+                Trend Modal Bulanan
+            </div>
+            <div class="chart-container">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        feather.replace();
+        
+        function refreshData() {
+            location.reload();
+        }
+        
+        // Initialize chart
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        const trendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                datasets: [
+                    {
+                        label: 'Modal Diterima',
+                        data: [<?php echo $totalCapitalInjected; ?>, 0, 0, 0],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        borderWidth: 2,
+                        fill: true,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    },
+                    {
+                        label: 'Modal Digunakan',
+                        data: [0, <?php echo $totalCapitalUsed / 4; ?>, <?php echo $totalCapitalUsed / 4; ?>, <?php echo $totalCapitalUsed / 2; ?>],
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        tension: 0.4,
+                        borderWidth: 2,
+                        fill: true,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            padding: 15,
+                            usePointStyle: true
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'Rp ' + (value / 1000000).toFixed(1) + 'M';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

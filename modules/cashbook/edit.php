@@ -64,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $amount = floatval($_POST['amount'] ?? 0);
     $description = $_POST['description'] ?? '';
     $payment_method = $_POST['payment_method'] ?? 'cash';
+    $cash_account_id = !empty($_POST['cash_account_id']) ? (int)$_POST['cash_account_id'] : null;
     
     // Validate
     $errors = [];
@@ -114,7 +115,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'category_id' => $category_id,
                 'amount' => $amount,
                 'description' => $description,
-                'payment_method' => $payment_method
+                'payment_method' => $payment_method,
+                'cash_account_id' => $cash_account_id
             ], 'id = :id', ['id' => $id]);
             
             $db->commit();
@@ -135,6 +137,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get divisions and categories
 $divisions = $db->fetchAll("SELECT * FROM divisions WHERE is_active = 1 ORDER BY division_name");
 $categories = $db->fetchAll("SELECT * FROM categories ORDER BY category_name");
+
+// Get cash accounts for business
+$businessId = $_SESSION['business_id'] ?? null;
+$cashAccounts = [];
+if ($businessId) {
+    $cashAccounts = $db->fetchAll(
+        "SELECT id, account_name, account_type FROM cash_accounts WHERE business_id = ? AND is_active = 1 ORDER BY is_default_account DESC, account_name",
+        [$businessId]
+    );
+}
 
 include '../../includes/header.php';
 ?>
@@ -233,6 +245,23 @@ include '../../includes/header.php';
                     <?php endforeach; ?>
                 </select>
             </div>
+
+            <!-- Cash Account -->
+            <?php if (!empty($cashAccounts)): ?>
+            <div class="form-group">
+                <label class="form-label">Akun Kas</label>
+                <select name="cash_account_id" class="form-control">
+                    <option value="">-- Pilih Akun Kas (opsional) --</option>
+                    <?php foreach ($cashAccounts as $acc): ?>
+                        <option value="<?php echo htmlspecialchars($acc['id']); ?>" 
+                                <?php echo (!empty($transaction['cash_account_id']) && $transaction['cash_account_id'] == $acc['id'] ? 'selected' : ''); ?>>
+                            <?php echo htmlspecialchars($acc['account_name']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">💡 Pilih akun untuk tracking yang lebih detail</small>
+            </div>
+            <?php endif; ?>
 
             <!-- Payment Method -->
             <div class="form-group">
