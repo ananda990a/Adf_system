@@ -99,6 +99,50 @@ if (isPost()) {
                 'is_editable' => 1
             ];
             
+            // ============================================
+            // SMART LOGIC - Auto Switch Petty Cash to Modal Owner
+            // ============================================
+            $autoSwitched = false;
+            if ($transactionType === 'expense' && !empty($cashAccountId)) {
+                try {
+                    $masterDb = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
+                    $masterDb->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // Get selected account info and current balance
+                    $stmt = $masterDb->prepare("SELECT account_type, current_balance FROM cash_accounts WHERE id = ?");
+                    $stmt->execute([$cashAccountId]);
+                    $selectedAccount = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    // If Petty Cash (cash type) and balance not enough
+                    if ($selectedAccount && $selectedAccount['account_type'] === 'cash' && $selectedAccount['current_balance'] < $amount) {
+                        // Get business ID
+                        $businessIdentifier = ACTIVE_BUSINESS_ID;
+                        $businessMapping = ['narayana-hotel' => 1, 'bens-cafe' => 2];
+                        $businessId = $businessMapping[$businessIdentifier] ?? 1;
+                        
+                        // Find Modal Owner account
+                        $stmt = $masterDb->prepare("SELECT id, current_balance FROM cash_accounts WHERE business_id = ? AND account_type = 'owner_capital' LIMIT 1");
+                        $stmt->execute([$businessId]);
+                        $modalOwnerAccount = $stmt->fetch(PDO::FETCH_ASSOC);
+                        
+                        // If Modal Owner exists and has enough balance, auto-switch
+                        if ($modalOwnerAccount && $modalOwnerAccount['current_balance'] >= $amount) {
+                            $cashAccountId = $modalOwnerAccount['id'];
+                            $data['cash_account_id'] = $cashAccountId;
+                            $autoSwitched = true;
+                            
+                            // Add notification to description
+                            $originalDesc = $description ?: '';
+                            $data['description'] = $originalDesc . ' [AUTO: Petty Cash habis, potong dari Modal Owner]';
+                        }
+                    }
+                } catch (Exception $e) {
+                    error_log("Smart logic error: " . $e->getMessage());
+                    // Continue with original account if error
+                }
+            }
+            // ============================================
+            
             // Start transaction for atomic operation
             $db->beginTransaction();
             
@@ -143,6 +187,17 @@ if (isPost()) {
                                 $_SESSION['user_id']
                             ]);
                             
+                            // Update current_balance in cash_accounts
+                            if ($transactionType === 'income') {
+                                // Income: add to balance
+                                $stmt = $masterDb->prepare("UPDATE cash_accounts SET current_balance = current_balance + ? WHERE id = ?");
+                                $stmt->execute([$amount, $cashAccountId]);
+                            } else {
+                                // Expense: subtract from balance (smart logic already ensured sufficient balance)
+                                $stmt = $masterDb->prepare("UPDATE cash_accounts SET current_balance = current_balance - ? WHERE id = ?");
+                                $stmt->execute([$amount, $cashAccountId]);
+                            }
+                            
                         } catch (Exception $e) {
                             error_log("Error saving to cash_account_transactions: " . $e->getMessage());
                             // Don't fail the whole transaction, just log the error
@@ -150,7 +205,14 @@ if (isPost()) {
                     }
                     
                     $db->commit();
-                    setFlash('success', 'Transaksi berhasil ditambahkan!');
+                    
+                    // Success message with auto-switch notification
+                    if ($autoSwitched) {
+                        setFlash('success', 'Transaksi berhasil! ⚡ Petty Cash tidak cukup, otomatis dipotong dari Modal Owner.');
+                    } else {
+                        setFlash('success', 'Transaksi berhasil ditambahkan!');
+                    }
+                    
                     redirect(BASE_URL . '/modules/cashbook/index.php');
                 } else {
                     $db->rollBack();
