@@ -359,6 +359,7 @@ if ($trialStatus) {
                     <div>
                         <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em;">NARAYANA HOTEL</div>
                         <div style="font-size: 0.875rem;">Financial Performance Monitor</div>
+                        <div style="font-size: 0.688rem; color: #10b981; font-weight: 600; margin-top: 0.125rem;">💰 Hotel Revenue / Pemasukan Hotel</div>
                     </div>
                 </h3>
             </div>
@@ -513,7 +514,10 @@ if ($trialStatus) {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
             <h3 style="font-size: 1rem; color: #7c2d12; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
                 <span style="font-size: 1.5rem;">💰</span>
-                Kas Modal Owner - <?php echo date('F Y'); ?>
+                <div>
+                    <div>Kas Modal Owner - <?php echo date('F Y'); ?></div>
+                    <div style="font-size: 0.75rem; color: #d97706; font-weight: 600; margin-top: 0.125rem;">📊 Daily Operational</div>
+                </div>
             </h3>
             <a href="modules/owner/owner-capital-monitor.php" style="padding: 0.5rem 1rem; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border-radius: 8px; text-decoration: none; font-size: 0.813rem; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
                 <i data-feather="external-link" style="width: 14px; height: 14px; margin-right: 4px;"></i>
