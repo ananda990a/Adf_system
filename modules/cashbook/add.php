@@ -37,8 +37,8 @@ try {
     
     $businessId = $businessMapping[$businessIdentifier] ?? 1;
     
-    // FILTER: Only show Petty Cash (cash) and Bank (bank) accounts
-    $stmt = $masterDb->prepare("SELECT id, account_name, account_type FROM cash_accounts WHERE business_id = ? AND account_type IN ('cash', 'bank') ORDER BY account_type = 'cash' DESC, account_name");
+    // Show all 3 account types: cash, bank, owner_capital
+    $stmt = $masterDb->prepare("SELECT id, account_name, account_type FROM cash_accounts WHERE business_id = ? AND account_type IN ('cash', 'bank', 'owner_capital') ORDER BY account_type = 'cash' DESC, account_type = 'bank' DESC, account_name");
     $stmt->execute([$businessId]);
     $cashAccounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
