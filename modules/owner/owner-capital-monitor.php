@@ -41,14 +41,37 @@ if (!$ownerCapitalAccount) {
     die('❌ Kas Modal Owner account not found. Please run accounting setup first.');
 }
 
-// Get ALL transactions for this account in selected period
+// Get business database name mapping
+$businessMapping = [
+    'narayana-hotel' => 1,
+    'bens-cafe' => 2
+];
+$numericBusinessId = $businessMapping[ACTIVE_BUSINESS_ID] ?? 1;
+
+// Determine business DB name
+$businessDbName = '';
+if (IS_PRODUCTION) {
+    if ($numericBusinessId == 1) {
+        $businessDbName = 'adfb2574_narayana';
+    } else {
+        $businessDbName = 'adfb2574_benscafe';
+    }
+} else {
+    if ($numericBusinessId == 1) {
+        $businessDbName = 'adf_narayana_hotel';
+    } else {
+        $businessDbName = 'adf_benscafe';
+    }
+}
+
+// Get ALL transactions for this account in selected period with cross-DB join
 $allTransactions = $db->fetchAll(
     "SELECT cat.*, 
             cb.description as cash_book_desc,
             cb.category,
             cb.division_id
      FROM cash_account_transactions cat
-     LEFT JOIN cash_book cb ON cat.transaction_id = cb.id
+     LEFT JOIN {$businessDbName}.cash_book cb ON cat.transaction_id = cb.id AND cat.transaction_type IN ('income', 'expense')
      WHERE cat.cash_account_id = ?
      AND cat.transaction_date >= ? AND cat.transaction_date <= ?
      ORDER BY cat.transaction_date DESC, cat.id DESC",
