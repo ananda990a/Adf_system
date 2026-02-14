@@ -49,36 +49,6 @@ preg_match("/define\('DEVELOPER_LOGO',\s*'([^']*)'\);/", $configContent, $logoMa
 $currentDevName = $nameMatch[1] ?? 'DevTeam Studio';
 $currentDevLogo = $logoMatch[1] ?? 'assets/img/developer-logo.png';
 
-// Get businesses for reset data functionality
-$businesses = [];
-try {
-    $businessResult = $db->fetchAll("SELECT business_id, business_name, business_type FROM businesses WHERE status = 'active' ORDER BY business_name");
-    foreach ($businessResult as $business) {
-        $businesses[$business['business_id']] = $business;
-    }
-} catch (Exception $e) {
-    // If no businesses table, use defaults
-    $businesses = [
-        '1' => ['business_id' => '1', 'business_name' => 'Default Business', 'business_type' => 'hotel'],
-        '2' => ['business_id' => '2', 'business_name' => 'Demo Restaurant', 'business_type' => 'restaurant']
-    ];
-}
-
-// Check if function exists, if not create a simple version
-if (!function_exists('getBusinessDisplayName')) {
-    function getBusinessDisplayName($businessId) {
-        global $businesses;
-        if (isset($businesses[$businessId])) {
-            $b = $businesses[$businessId];
-            return $b['business_name'] . ' (' . ucfirst($b['business_type']) . ')';
-        }
-        return 'Business #' . $businessId;
-    }
-}
-
-$selectedBusiness = $_POST['reset_business_id'] ?? (array_key_first($businesses) ?: '1');
-$resetResult = null;
-
 // Handle form submission for name
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['developer_name'])) {
     $newName = trim($_POST['developer_name']);
@@ -247,51 +217,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['footer_copyright'])) 
     $currentFooterVersion = $version;
 }
 
-// Handle reset data submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_data_submit'])) {
-    $businessId = $_POST['reset_business_id'] ?? '';
-    $resetTypes = $_POST['reset_type'] ?? [];
-    
-    if (!empty($businessId) && !empty($resetTypes)) {
-        $resetResult = [];
-        
-        foreach ($resetTypes as $type) {
-            // Call reset API for each type  
-            $postData = json_encode(['reset_type' => $type]);
-            
-            $context = stream_context_create([
-                'http' => [
-                    'method' => 'POST',
-                    'header' => [
-                        'Content-Type: application/json',
-                        'Cookie: ' . (isset($_SERVER['HTTP_COOKIE']) ? $_SERVER['HTTP_COOKIE'] : '')
-                    ],
-                    'content' => $postData
-                ]
-            ]);
-            
-            $response = @file_get_contents(BASE_URL . '/api/reset-data.php', false, $context);
-            
-            if ($response === false) {
-                $resetResult[$type] = [
-                    'success' => false,
-                    'message' => 'No response from API - Check if API endpoint exists'
-                ];
-            } else {
-                $decoded = json_decode($response, true);
-                $resetResult[$type] = $decoded ?: [
-                    'success' => false,
-                    'message' => 'Invalid JSON response: ' . substr($response, 0, 100)
-                ];
-            }
-        }
-        
-        $success = 'Reset data telah dijalankan untuk ' . count($resetTypes) . ' jenis data pada ' . getBusinessDisplayName($businessId) . '. Lihat hasil detail di bawah.';
-    } else {
-        $error = 'Pilih bisnis dan minimal 1 jenis data untuk direset.';
-    }
-}
-
 // Handle logo upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['developer_logo']) && $_FILES['developer_logo']['error'] === UPLOAD_ERR_OK) {
     $file = $_FILES['developer_logo'];
@@ -340,237 +265,246 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <style>
-    /* ULTRA COMPACT CSS - Force Override Everything */
+    /* COMPACT & READABLE CSS */
     .container-fluid {
-        padding: 0.3rem 0.5rem !important;
-        max-width: 85% !important;
+        padding: 1rem 1.5rem !important;
+        max-width: 90% !important;
     }
     
     .row {
-        margin: 0 -0.15rem !important;
+        margin: 0 -0.5rem !important;
     }
     
     .col-lg-6 {
-        padding: 0 0.15rem !important;
+        padding: 0 0.5rem !important;
     }
     
     .py-4 {
-        padding-top: 0.3rem !important;
-        padding-bottom: 0.3rem !important;
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
     }
     
     .d-flex.justify-content-between {
-        margin-bottom: 0.3rem !important;
+        margin-bottom: 1rem !important;
     }
     
-    /* Ultra Compact Cards */
+    /* Compact Cards */
     .settings-card {
         background: white !important;
-        border-radius: 4px !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
-        margin-bottom: 0.3rem !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08) !important;
+        margin-bottom: 1rem !important;
         overflow: hidden !important;
     }
     
     .settings-card-header {
-        padding: 0.25rem 0.4rem !important;
-        border-bottom: 1px solid #f0f0f0 !important;
+        padding: 0.75rem 1rem !important;
+        border-bottom: 1px solid #e5e7eb !important;
         display: flex !important;
         align-items: center !important;
-        gap: 0.25rem !important;
+        gap: 0.75rem !important;
     }
     
     .settings-card-header .icon {
-        width: 16px !important;
-        height: 16px !important;
-        border-radius: 3px !important;
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 6px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        font-size: 0.55rem !important;
+        font-size: 1rem !important;
     }
     
     .settings-card-header h5 {
         margin: 0 !important;
-        font-weight: 500 !important;
-        font-size: 0.65rem !important;
-        line-height: 1.1 !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+        line-height: 1.3 !important;
     }
     
     .settings-card-header small {
-        color: #888 !important;
+        color: #6b7280 !important;
         font-weight: 400 !important;
-        font-size: 0.5rem !important;
+        font-size: 0.813rem !important;
     }
     
     .settings-card-body {
-        padding: 0.4rem !important;
+        padding: 1rem !important;
     }
     
-    /* Ultra Compact Preview */
+    /* Preview Box */
     .preview-box {
-        background: #f8f9fa !important;
-        border: 1px solid #e9ecef !important;
-        border-radius: 3px !important;
-        padding: 0.3rem !important;
+        background: #f9fafb !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 6px !important;
+        padding: 0.75rem !important;
         text-align: center !important;
-        margin-bottom: 0.3rem !important;
+        margin-bottom: 0.75rem !important;
     }
     
     .preview-box img {
-        max-width: 40px !important;
-        max-height: 40px !important;
-        border-radius: 3px !important;
+        max-width: 80px !important;
+        max-height: 80px !important;
+        border-radius: 4px !important;
     }
     
-    /* Ultra Compact Forms */
+    /* Forms */
     .form-control, .form-select {
-        padding: 0.2rem 0.3rem !important;
-        font-size: 0.6rem !important;
-        border-radius: 3px !important;
-        border: 1px solid #ddd !important;
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.875rem !important;
+        border-radius: 6px !important;
+        border: 1px solid #d1d5db !important;
         height: auto !important;
-        min-height: 20px !important;
-        line-height: 1.2 !important;
+        min-height: 38px !important;
+        line-height: 1.5 !important;
     }
     
     .form-label {
-        font-size: 0.6rem !important;
-        font-weight: 500 !important;
-        margin-bottom: 0.1rem !important;
+        font-size: 0.875rem !important;
+        font-weight: 600 !important;
+        margin-bottom: 0.5rem !important;
+        color: #374151 !important;
     }
     
     .form-text {
-        font-size: 0.5rem !important;
-        margin-top: 0.1rem !important;
+        font-size: 0.813rem !important;
+        margin-top: 0.25rem !important;
+        color: #6b7280 !important;
     }
     
     .btn {
-        padding: 0.2rem 0.4rem !important;
-        font-size: 0.6rem !important;
-        border-radius: 3px !important;
-        line-height: 1.2 !important;
+        padding: 0.5rem 1rem !important;
+        font-size: 0.875rem !important;
+        border-radius: 6px !important;
+        line-height: 1.5 !important;
+        font-weight: 500 !important;
     }
     
     .btn-sm {
-        padding: 0.15rem 0.25rem !important;
-        font-size: 0.5rem !important;
+        padding: 0.375rem 0.75rem !important;
+        font-size: 0.813rem !important;
     }
     
-    /* Ultra Compact Spacing */
+    /* Spacing */
     .mb-3 {
-        margin-bottom: 0.2rem !important;
+        margin-bottom: 1rem !important;
     }
     
     .mb-4 {
-        margin-bottom: 0.3rem !important;
+        margin-bottom: 1.5rem !important;
     }
     
     .mb-1 {
-        margin-bottom: 0.1rem !important;
+        margin-bottom: 0.25rem !important;
     }
     
-    .me-1, .me-2 {
-        margin-right: 0.1rem !important;
+    .me-1 {
+        margin-right: 0.25rem !important;
     }
     
-    .mt-1, .mt-2 {
-        margin-top: 0.1rem !important;
+    .me-2 {
+        margin-right: 0.5rem !important;
     }
     
-    /* Ultra Compact Alerts */
+    .mt-1 {
+        margin-top: 0.25rem !important;
+    }
+    
+    .mt-2 {
+        margin-top: 0.5rem !important;
+    }
+    
+    /* Alerts */
     .alert {
-        padding: 0.25rem 0.4rem !important;
-        font-size: 0.6rem !important;
-        margin-bottom: 0.2rem !important;
+        padding: 0.75rem 1rem !important;
+        font-size: 0.875rem !important;
+        margin-bottom: 1rem !important;
+        border-radius: 6px !important;
     }
     
-    /* Ultra Compact Typography */
+    /* Typography */
     h4 {
-        font-size: 0.75rem !important;
-        margin-bottom: 0.1rem !important;
+        font-size: 1.125rem !important;
+        margin-bottom: 0.5rem !important;
+        font-weight: 600 !important;
     }
     
     h5 {
-        font-size: 0.65rem !important;
+        font-size: 0.95rem !important;
     }
     
     h6 {
-        font-size: 0.6rem !important;
+        font-size: 0.875rem !important;
     }
     
     .text-muted {
-        font-size: 0.5rem !important;
+        font-size: 0.813rem !important;
+        color: #6b7280 !important;
     }
     
-    /* Ultra Compact Checkboxes */
+    /* Checkboxes */
     .form-check {
-        margin-bottom: 0.15rem !important;
-        padding-left: 1rem !important;
+        margin-bottom: 0.5rem !important;
+        padding-left: 1.5rem !important;
     }
     
     .form-check-label {
-        font-size: 0.55rem !important;
-        padding-left: 0.1rem !important;
+        font-size: 0.875rem !important;
+        padding-left: 0.25rem !important;
     }
     
     .form-check-input {
-        margin-top: 0.05rem !important;
-        transform: scale(0.8) !important;
+        margin-top: 0.125rem !important;
+        width: 1.125rem !important;
+        height: 1.125rem !important;
     }
     
-    /* Ultra Compact Current Value */
+    /* Current Value Display */
     .current-value {
-        background: #f8f9fa !important;
-        border-left: 2px solid var(--dev-primary) !important;
-        padding: 0.2rem 0.3rem !important;
-        border-radius: 0 2px 2px 0 !important;
-        margin-top: 0.2rem !important;
+        background: #f9fafb !important;
+        border-left: 3px solid var(--dev-primary) !important;
+        padding: 0.75rem !important;
+        border-radius: 0 6px 6px 0 !important;
+        margin-top: 0.5rem !important;
     }
     
     .current-value small {
-        color: #888 !important;
-        font-size: 0.5rem !important;
+        color: #6b7280 !important;
+        font-size: 0.813rem !important;
     }
     
     .current-value strong {
         display: block !important;
-        color: #333 !important;
-        margin-top: 0.05rem !important;
-        font-size: 0.6rem !important;
+        color: #111827 !important;
+        margin-top: 0.25rem !important;
+        font-size: 0.875rem !important;
     }
     
-    /* Ultra Compact Icons */
+    /* Icons */
     .bi {
-        font-size: 0.6rem !important;
+        font-size: 0.875rem !important;
     }
     
     .settings-card-header .bi {
-        font-size: 0.5rem !important;
+        font-size: 1rem !important;
     }
     
-    /* Grid Ultra Compact */
+    /* Grid */
     @media (min-width: 992px) {
         .col-lg-6 {
-            max-width: 49% !important;
-            flex: 0 0 49% !important;
+            max-width: 50% !important;
+            flex: 0 0 50% !important;
         }
     }
     
-    /* Reset Data Grid */
-    .reset-data-grid {
-        gap: 0.1rem !important;
-    }
-    
-    .reset-data-grid .col-md-6,
-    .reset-data-grid .col-md-3 {
-        padding: 0.05rem !important;
-    }
-    
     /* Page Header */
+    .justify-content-between h4 {
+        font-size: 1.5rem !important;
+    }
+    
     .justify-content-between .btn {
-        font-size: 0.55rem !important;
-        padding: 0.15rem 0.3rem !important;
+        font-size: 0.875rem !important;
+        padding: 0.5rem 1rem !important;
     }
 </style>
 
@@ -997,216 +931,6 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
     
-    <!-- Reset Data Business Section --> 
-    <div class="settings-card" style="background: linear-gradient(135deg, rgba(220,38,38,0.05), rgba(239,68,68,0.05)); border: 2px solid rgba(220,38,38,0.1); margin-bottom: 1rem;">
-        <div class="settings-card-header" style="padding: 1rem;">
-            <div class="icon" style="background: rgba(220,38,38,0.15); color: #dc2626; width: 2.5rem; height: 2.5rem;">
-                <i class="bi bi-trash"></i>
-            </div>
-            <div>
-                <h5 style="font-size: 1rem; margin-bottom: 0.25rem;">🗑️ Reset Data Business</h5>
-                <small style="font-size: 0.75rem;">Hapus data tertentu untuk bisnis terpilih</small>
-            </div>
-        </div>
-        <div class="settings-card-body" style="padding: 1rem;">
-            <!-- Warning Notice -->
-            <div class="alert alert-danger" style="border-left: 3px solid #dc2626; padding: 0.75rem;">
-                <div class="d-flex align-items-start">
-                    <i class="bi bi-exclamation-triangle-fill text-danger me-2" style="font-size: 1rem;"></i>
-                    <div>
-                        <h6 class="mb-1" style="font-size: 0.813rem; font-weight: 600;">⚠️ PERINGATAN - Reset Data Permanen</h6>
-                        <p class="mb-0" style="font-size: 0.75rem;">
-                            Data yang dihapus <strong>tidak dapat dikembalikan!</strong> Pastikan backup dulu.
-                        </p>
-                    </div>
-                </div>
-            </div>
-            
-            <form method="POST" onsubmit="return confirmReset();" style="margin-top: 1rem;">
-                <div class="row g-2">
-                    <!-- Business Selection -->
-                    <div class="col-md-6">
-                        <label class="form-label" style="font-size: 0.875rem; font-weight: 600;">Pilih Bisnis</label>
-                        <select name="reset_business_id" class="form-select" required>
-                            <?php if (!empty($businesses)): ?>
-                                <?php foreach ($businesses as $bid => $b): ?>
-                                    <option value="<?php echo htmlspecialchars($bid); ?>" <?php if ($selectedBusiness == $bid) echo 'selected'; ?>>
-                                        <?php echo getBusinessDisplayName($bid); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <option value="1">Default Business (Hotel)</option>
-                                <option value="2">Demo Restaurant</option>
-                            <?php endif; ?>
-                        </select>
-                    </div>
-                    
-                    <!-- Reset Button Column -->
-                    <div class="col-md-6 d-flex align-items-end">
-                        <button type="submit" name="reset_data_submit" class="btn btn-danger w-100" style="font-weight: 600; font-size: 0.875rem; padding: 0.5rem 1rem;">
-                            <i class="bi bi-trash me-1"></i>
-                            Reset Data yang Dipilih
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Data Type Selection -->  
-                <div style="margin-top: 1rem;">
-                    <label class="form-label" style="font-size: 0.875rem; font-weight: 600;">Pilih Data yang Direset</label>
-                    <div class="row g-2">
-                        <div class="col-md-3 col-sm-6">
-                            <div class="form-check" style="padding: 0.5rem; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
-                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="accounting" id="reset_accounting">
-                                <label class="form-check-label" for="reset_accounting" style="font-size: 0.813rem; cursor: pointer;">
-                                    💰 Data Accounting
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="form-check" style="padding: 0.5rem; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
-                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="bookings" id="reset_bookings">
-                                <label class="form-check-label" for="reset_bookings" style="font-size: 0.813rem; cursor: pointer;">
-                                    📅 Booking/Reservasi
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="form-check" style="padding: 0.5rem; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
-                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="invoices" id="reset_invoices">
-                                <label class="form-check-label" for="reset_invoices" style="font-size: 0.813rem; cursor: pointer;">
-                                    🧾 Invoice
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="form-check" style="padding: 0.5rem; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
-                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="procurement" id="reset_procurement">
-                                <label class="form-check-label" for="reset_procurement" style="font-size: 0.813rem; cursor: pointer;">
-                                    📋 PO & Procurement
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="form-check" style="padding: 0.5rem; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
-                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="inventory" id="reset_inventory">
-                                <label class="form-check-label" for="reset_inventory" style="font-size: 0.813rem; cursor: pointer;">
-                                    📦 Inventory
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="form-check" style="padding: 0.5rem; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
-                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="employees" id="reset_employees">
-                                <label class="form-check-label" for="reset_employees" style="font-size: 0.813rem; cursor: pointer;">
-                                    👥 Karyawan
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="form-check" style="padding: 0.5rem; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
-                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="users" id="reset_users">
-                                <label class="form-check-label" for="reset_users" style="font-size: 0.813rem; cursor: pointer;">
-                                    👤 Users
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="form-check" style="padding: 0.5rem; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
-                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="guests" id="reset_guests">
-                                <label class="form-check-label" for="reset_guests" style="font-size: 0.813rem; cursor: pointer;">
-                                    🧑‍🤝‍🧑 Guests
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="form-check" style="padding: 0.5rem; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
-                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="menu" id="reset_menu">
-                                <label class="form-check-label" for="reset_menu" style="font-size: 0.813rem; cursor: pointer;">
-                                    🍽️ Menu
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="form-check" style="padding: 0.5rem; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
-                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="orders" id="reset_orders">
-                                <label class="form-check-label" for="reset_orders" style="font-size: 0.813rem; cursor: pointer;">
-                                    🛒 Orders
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="form-check" style="padding: 0.5rem; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
-                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="reports" id="reset_reports">
-                                <label class="form-check-label" for="reset_reports" style="font-size: 0.813rem; cursor: pointer;">
-                                    📊 Reports
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="form-check" style="padding: 0.5rem; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
-                                <input class="form-check-input" type="checkbox" name="reset_type[]" value="logs" id="reset_logs">
-                                <label class="form-check-label" for="reset_logs" style="font-size: 0.813rem; cursor: pointer;">
-                                    📝 Logs
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </form>
-            
-            <!-- Reset Results Display -->
-            <?php if ($resetResult !== null): ?>
-                <div class="mt-3 p-3" style="background: rgba(59,130,246,0.05); border-radius: 8px; border-left: 4px solid #3b82f6;">
-                    <h6 class="text-primary mb-2" style="font-size: 0.875rem; font-weight: 600;">📊 Hasil Reset Data:</h6>
-                    <div class="row g-2">
-                        <?php foreach ($resetResult as $type => $res): 
-                            $isSuccess = !empty($res['success']);
-                            $message = $res['message'] ?? 'No response';
-                        ?>
-                            <div class="col-md-6 col-lg-4">
-                                <div class="d-flex align-items-start p-2" style="background: white; border-radius: 6px; border: 1px solid <?php echo $isSuccess ? '#10b981' : '#ef4444'; ?>;">
-                                    <span class="badge <?php echo $isSuccess ? 'bg-success' : 'bg-danger'; ?> me-2" style="font-size: 0.7rem;">
-                                        <?php echo $isSuccess ? '✅' : '❌'; ?>
-                                    </span>
-                                    <div style="flex: 1;">
-                                        <strong style="font-size: 0.75rem; display: block; margin-bottom: 0.15rem;"><?php echo htmlspecialchars($type); ?></strong>
-                                        <small style="font-size: 0.7rem; color: #666; line-height: 1.2;">
-                                            <?php echo htmlspecialchars($message); ?>
-                                        </small>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            <?php endif; ?>
-        </div>
-    </div>
-
 </div>
-    
-<script>
-function confirmReset() {
-    const checkboxes = document.querySelectorAll('input[name="reset_type[]"]:checked');
-    const businessSelect = document.querySelector('select[name="reset_business_id"]');
-    
-    if (checkboxes.length === 0) {
-        alert('⚠️ Pilih minimal 1 jenis data yang ingin direset!');
-        return false;
-    }
-    
-    const businessName = businessSelect.options[businessSelect.selectedIndex].text;
-    const dataTypes = Array.from(checkboxes).map(cb => cb.nextElementSibling.textContent.trim()).join('\\n• ');
-    
-    const confirmMessage = 
-        `⚠️ KONFIRMASI RESET DATA\\n\\n` +
-        `Bisnis: ${businessName}\\n\\n` +
-        `Data yang akan dihapus:\\n• ${dataTypes}\\n\\n` +
-        `Data akan dihapus PERMANEN dan TIDAK DAPAT dikembalikan!\\n\\n` +
-        `Apakah Anda yakin ingin melanjutkan?`;
-        
-    return confirm(confirmMessage);
-}
-</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
