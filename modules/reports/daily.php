@@ -43,6 +43,25 @@ $allTimeCashResult = $db->fetchOne(
 );
 $totalRealCash = $allTimeCashResult['balance'] ?? 0;
 
+// Get Cash Account Balances from Master DB
+$pettyCashBalance = 0;
+$ownerCapitalBalance = 0;
+try {
+    // Get Petty Cash balance (Kas Besar - account_type = 'cash')
+    $stmt = $masterDb->prepare("SELECT current_balance FROM cash_accounts WHERE business_id = ? AND account_type = 'cash' AND is_default_account = 1");
+    $stmt->execute([$businessId]);
+    $pettyCashResult = $stmt->fetch(PDO::FETCH_ASSOC);
+    $pettyCashBalance = $pettyCashResult['current_balance'] ?? 0;
+    
+    // Get Owner Capital balance
+    $stmt = $masterDb->prepare("SELECT current_balance FROM cash_accounts WHERE business_id = ? AND account_type = 'owner_capital'");
+    $stmt->execute([$businessId]);
+    $ownerCapitalResult = $stmt->fetch(PDO::FETCH_ASSOC);
+    $ownerCapitalBalance = $ownerCapitalResult['current_balance'] ?? 0;
+} catch (Exception $e) {
+    error_log("Error fetching cash account balances: " . $e->getMessage());
+}
+
 $pageTitle = 'Laporan Harian';
 
 // Get filter parameters
@@ -440,13 +459,22 @@ function closePDFPreview() {
         <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 5px;">(Termasuk Saldo Awal: <?php echo formatCurrency($openingBalance); ?>)</div>
     </div>
     
-    <!-- Total Uang Cash (Real Money) -->
-    <div class="card" style="padding: 1rem; border-left: 4px solid #06b6d4;">
-        <div style="font-size: 0.75rem; color: #0891b2; margin-bottom: 0.5rem;">Total Uang Cash</div>
-        <div style="font-size: 1.5rem; font-weight: 800; color: #0891b2;">
-            <?php echo formatCurrency($totalRealCash); ?>
+    <!-- Saldo Petty Cash (Kas Besar) -->
+    <div class="card" style="padding: 1rem; border-left: 4px solid #10b981;">
+        <div style="font-size: 0.75rem; color: #059669; margin-bottom: 0.5rem;">💵 Saldo Petty Cash</div>
+        <div style="font-size: 1.5rem; font-weight: 800; color: #059669;">
+            <?php echo formatCurrency($pettyCashBalance); ?>
         </div>
-        <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 5px;">(Accumulated Real Balance)</div>
+        <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 5px;">(Kas Besar - Operasional)</div>
+    </div>
+    
+    <!-- Saldo Modal Owner -->
+    <div class="card" style="padding: 1rem; border-left: 4px solid #f59e0b;">
+        <div style="font-size: 0.75rem; color: #d97706; margin-bottom: 0.5rem;">🔥 Saldo Modal Owner</div>
+        <div style="font-size: 1.5rem; font-weight: 800; color: #d97706;">
+            <?php echo formatCurrency($ownerCapitalBalance); ?>
+        </div>
+        <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 5px;">(Untuk Expense Operasional)</div>
     </div>
     
     <div class="card" style="padding: 1rem;">

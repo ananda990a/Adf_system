@@ -12,11 +12,55 @@ $auth->requireLogin();
 $db = Database::getInstance();
 $currentUser = $auth->getCurrentUser();
 
-// Get Total Real Cash (All Time)
+// ============================================
+// EXCLUDE OWNER CAPITAL FROM OPERATIONAL STATS
+// ============================================
+$ownerCapitalAccountIds = [];
+try {
+    $masterDb = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
+    $masterDb->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    
+    $businessIdentifier = ACTIVE_BUSINESS_ID;
+    $businessMapping = ['narayana-hotel' => 1, 'bens-cafe' => 2];
+    $businessId = $businessMapping[$businessIdentifier] ?? 1;
+    
+    $stmt = $masterDb->prepare("SELECT id FROM cash_accounts WHERE business_id = ? AND account_type = 'owner_capital'");
+    $stmt->execute([$businessId]);
+    $ownerCapitalAccountIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (Exception $e) {
+    error_log("Error fetching owner capital accounts: " . $e->getMessage());
+}
+
+// Build exclusion clause
+$excludeOwnerCapital = '';
+if (!empty($ownerCapitalAccountIds)) {
+    $excludeOwnerCapital = " AND (cash_account_id IS NULL OR cash_account_id NOT IN (" . implode(',', $ownerCapitalAccountIds) . "))";
+}
+
+// Get Total Real Cash (All Time) - Exclude Owner Capital
 $allTimeCashResult = $db->fetchOne(
-    "SELECT SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE -amount END) as balance FROM cash_book"
+    "SELECT SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE -amount END) as balance FROM cash_book WHERE 1=1" . $excludeOwnerCapital
 );
 $totalRealCash = $allTimeCashResult['balance'] ?? 0;
+
+// Get Cash Account Balances from Master DB
+$pettyCashBalance = 0;
+$ownerCapitalBalance = 0;
+try {
+    // Get Petty Cash balance (Kas Besar - account_type = 'cash')
+    $stmt = $masterDb->prepare("SELECT current_balance FROM cash_accounts WHERE business_id = ? AND account_type = 'cash' AND is_default_account = 1");
+    $stmt->execute([$businessId]);
+    $pettyCashResult = $stmt->fetch(PDO::FETCH_ASSOC);
+    $pettyCashBalance = $pettyCashResult['current_balance'] ?? 0;
+    
+    // Get Owner Capital balance
+    $stmt = $masterDb->prepare("SELECT current_balance FROM cash_accounts WHERE business_id = ? AND account_type = 'owner_capital'");
+    $stmt->execute([$businessId]);
+    $ownerCapitalResult = $stmt->fetch(PDO::FETCH_ASSOC);
+    $ownerCapitalBalance = $ownerCapitalResult['current_balance'] ?? 0;
+} catch (Exception $e) {
+    error_log("Error fetching cash account balances: " . $e->getMessage());
+}
 
 $pageTitle = 'Laporan Bulanan';
 
@@ -40,13 +84,19 @@ if ($division_id > 0) {
 
 $whereClause = implode(' AND ', $whereConditions);
 
+// Build exclusion condition for CASE statement
+$ownerCapitalExcludeCondition = '';
+if (!empty($ownerCapitalAccountIds)) {
+    $ownerCapitalExcludeCondition = " AND (cb.cash_account_id IS NULL OR cb.cash_account_id NOT IN (" . implode(',', $ownerCapitalAccountIds) . "))";
+}
+
 // Get Daily Summary for the Month
 $dailySummary = $db->fetchAll("
     SELECT 
         DATE(cb.transaction_date) as date,
-        COALESCE(SUM(CASE WHEN cb.transaction_type = 'income' THEN cb.amount ELSE 0 END), 0) as total_income,
+        COALESCE(SUM(CASE WHEN cb.transaction_type = 'income'{$ownerCapitalExcludeCondition} THEN cb.amount ELSE 0 END), 0) as total_income,
         COALESCE(SUM(CASE WHEN cb.transaction_type = 'expense' THEN cb.amount ELSE 0 END), 0) as total_expense,
-        COALESCE(SUM(CASE WHEN cb.transaction_type = 'income' THEN cb.amount ELSE 0 END), 0) - 
+        COALESCE(SUM(CASE WHEN cb.transaction_type = 'income'{$ownerCapitalExcludeCondition} THEN cb.amount ELSE 0 END), 0) - 
         COALESCE(SUM(CASE WHEN cb.transaction_type = 'expense' THEN cb.amount ELSE 0 END), 0) as net_balance,
         COUNT(*) as transaction_count
     FROM cash_book cb
@@ -155,12 +205,22 @@ include '../../includes/header.php';
         </div>
     </div>
     
-    <!-- Total Uang Cash (Real Money) -->
-    <div class="card" style="padding: 1rem; border-left: 4px solid #06b6d4;">
-        <div style="font-size: 0.75rem; color: #0891b2; margin-bottom: 0.5rem;">Total Uang Cash</div>
-        <div style="font-size: 1.5rem; font-weight: 800; color: #0891b2;">
-            <?php echo formatCurrency($totalRealCash); ?>
+    <!-- Saldo Petty Cash (Kas Besar) -->
+    <div class="card" style="padding: 1rem; border-left: 4px solid #10b981;">
+        <div style="font-size: 0.75rem; color: #059669; margin-bottom: 0.5rem;">💵 Saldo Petty Cash</div>
+        <div style="font-size: 1.5rem; font-weight: 800; color: #059669;">
+            <?php echo formatCurrency($pettyCashBalance); ?>
         </div>
+        <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 5px;">(Kas Besar - Operasional)</div>
+    </div>
+    
+    <!-- Saldo Modal Owner -->
+    <div class="card" style="padding: 1rem; border-left: 4px solid #f59e0b;">
+        <div style="font-size: 0.75rem; color: #d97706; margin-bottom: 0.5rem;">🔥 Saldo Modal Owner</div>
+        <div style="font-size: 1.5rem; font-weight: 800; color: #d97706;">
+            <?php echo formatCurrency($ownerCapitalBalance); ?>
+        </div>
+        <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 5px;">(Untuk Expense Operasional)</div>
     </div>
     
     <div class="card" style="padding: 1rem;">
