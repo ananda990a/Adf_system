@@ -1012,10 +1012,33 @@ $logoFile = 'logo-alt.png';
                     Financial Summary
                 </div>
                 
+                <!-- Operational Balance & Capital Received -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3);">
+                        <div style="font-size: 0.55rem; color: #1e3a8a; font-weight: 600; text-transform: uppercase; margin-bottom: 0.15rem; display: flex; align-items: center; gap: 0.25rem;">
+                            <i data-feather="wallet" style="width: 10px; height: 10px;"></i>
+                            Saldo Operasional
+                        </div>
+                        <div id="operationalBalance" style="font-size: 0.85rem; font-weight: 700; color: #1e40af;">Rp 0</div>
+                        <div style="font-size: 0.5rem; color: #6b7280;">Kas Harian</div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">
+                        <div style="font-size: 0.55rem; color: #78350f; font-weight: 600; text-transform: uppercase; margin-bottom: 0.15rem; display: flex; align-items: center; gap: 0.25rem;">
+                            <i data-feather="gift" style="width: 10px; height: 10px;"></i>
+                            Cash dari Owner
+                        </div>
+                        <div id="todayCapitalReceived" style="font-size: 0.85rem; font-weight: 700; color: #d97706;">Rp 0</div>
+                        <div style="font-size: 0.5rem; color: #6b7280;">Hari Ini</div>
+                    </div>
+                </div>
+                
                 <!-- Today Stats -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
                     <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2);">
-                        <div style="font-size: 0.55rem; color: #065f46; font-weight: 600; text-transform: uppercase; margin-bottom: 0.15rem;">Today Income</div>
+                        <div style="font-size: 0.55rem; color: #065f46; font-weight: 600; text-transform: uppercase; margin-bottom: 0.15rem; display: flex; align-items: center; gap: 0.25rem;">
+                            <i data-feather="trending-up" style="width: 10px; height: 10px;"></i>
+                            Pendapatan Tamu
+                        </div>
                         <div id="todayIncome" style="font-size: 0.85rem; font-weight: 700; color: #10b981;">Rp 0</div>
                         <div id="todayIncomeCount" style="font-size: 0.5rem; color: #6b7280;">0 txn</div>
                     </div>
@@ -1503,6 +1526,19 @@ $logoFile = 'logo-alt.png';
                 console.log('Stats response:', data);
                 
                 if (data.success) {
+                    // Update operational balance
+                    const operationalBalance = document.getElementById('operationalBalance');
+                    if (operationalBalance) {
+                        operationalBalance.textContent = formatRupiah(data.operational_balance || 0);
+                    }
+                    
+                    // Update capital received today
+                    const todayCapitalReceived = document.getElementById('todayCapitalReceived');
+                    if (todayCapitalReceived) {
+                        todayCapitalReceived.textContent = formatRupiah(data.today.capital_received || 0);
+                    }
+                    
+                    // Update income and expense
                     document.getElementById('todayIncome').textContent = formatRupiah(data.today.income);
                     document.getElementById('todayExpense').textContent = formatRupiah(data.today.expense);
                     document.getElementById('todayIncomeCount').textContent = `${data.today.income_count} txn`;
