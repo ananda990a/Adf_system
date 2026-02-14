@@ -26,8 +26,9 @@ if (!$businessId) {
     die('❌ Business ID not set in session');
 }
 
-// Get current month data
-$currentMonth = date('Y-m-01');
+// Get period filter from GET or default to current month
+$selectedPeriod = $_GET['period'] ?? date('Y-m');
+$currentMonth = date('Y-m-01', strtotime($selectedPeriod . '-01'));
 $nextMonth = date('Y-m-t', strtotime($currentMonth));
 
 // Get Kas Modal Owner account
@@ -40,37 +41,33 @@ if (!$ownerCapitalAccount) {
     die('❌ Kas Modal Owner account not found. Please run accounting setup first.');
 }
 
-// Get this month's capital injections (income to owner_capital account)
-$capitalInjections = $db->fetchAll(
-    "SELECT * FROM cash_account_transactions 
-     WHERE cash_account_id = ? AND transaction_type = 'capital_injection'
-     AND transaction_date >= ? AND transaction_date <= ?
-     ORDER BY transaction_date DESC",
+// Get ALL transactions for this account in selected period
+$allTransactions = $db->fetchAll(
+    "SELECT cat.*, 
+            cb.description as cash_book_desc,
+            cb.category,
+            cb.division_id
+     FROM cash_account_transactions cat
+     LEFT JOIN cash_book cb ON cat.transaction_id = cb.id
+     WHERE cat.cash_account_id = ?
+     AND cat.transaction_date >= ? AND cat.transaction_date <= ?
+     ORDER BY cat.transaction_date DESC, cat.id DESC",
     [$ownerCapitalAccount['id'], $currentMonth, $nextMonth]
 );
 
 // Calculate totals
-$totalCapitalInjected = 0;
-$totalCapitalUsed = 0;
+$totalCapitalInjected = 0;  // Total setoran dari owner (DEBIT - uang masuk)
+$totalCapitalUsed = 0;      // Total digunakan untuk operasional (CREDIT - uang keluar)
 
-foreach ($capitalInjections as $txn) {
+foreach ($allTransactions as $txn) {
+    // DEBIT = Uang masuk ke Kas Modal Owner (setoran dari owner)
     if ($txn['debit'] > 0) {
         $totalCapitalInjected += $txn['debit'];
     }
-}
-
-// Get expenses that reduced owner capital (debit from modal account)
-$capitalExpenses = $db->fetchAll(
-    "SELECT * FROM cash_account_transactions 
-     WHERE cash_account_id = ? AND transaction_type IN ('expense', 'transfer')
-     AND transaction_date >= ? AND transaction_date <= ?
-     AND credit > 0
-     ORDER BY transaction_date DESC",
-    [$ownerCapitalAccount['id'], $currentMonth, $nextMonth]
-);
-
-foreach ($capitalExpenses as $txn) {
-    $totalCapitalUsed += $txn['credit'];
+    // CREDIT = Uang keluar dari Kas Modal Owner (digunakan operasional)
+    if ($txn['credit'] > 0) {
+        $totalCapitalUsed += $txn['credit'];
+    }
 }
 
 $currentBalance = $ownerCapitalAccount['current_balance'];
@@ -324,7 +321,7 @@ $remainingCapital = $currentBalance;
 </head>
 <body>
     <div class="container">
-        <a href="dashboard.php" class="back-link">
+        <a href="<?php echo BASE_URL; ?>/index.php" class="back-link">
             <i data-feather="arrow-left" style="width: 16px; height: 16px;"></i>
             Kembali ke Dashboard
         </a>
@@ -332,25 +329,39 @@ $remainingCapital = $currentBalance;
         <div class="page-header">
             <div>
                 <h1 class="page-title">💰 Monitor Kas Modal Owner</h1>
-                <p class="page-subtitle">Tracking pengeluaran modal bulan <?php echo strftime('%B %Y', strtotime($currentMonth)); ?></p>
+                <p class="page-subtitle">Tracking pengeluaran modal bulan <?php echo date('F Y', strtotime($currentMonth)); ?></p>
             </div>
-            <button onclick="refreshData()" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
-                <i data-feather="refresh-cw" style="width: 16px; height: 16px;"></i>
-                Refresh
-            </button>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <!-- Period Selector -->
+                <select id="periodSelector" onchange="changePeriod(this.value)" style="padding: 0.75rem 1.5rem; background: white; border: 2px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-weight: 600; color: #334155;">
+                    <?php
+                    // Generate last 12 months
+                    for ($i = 0; $i < 12; $i++) {
+                        $month = date('Y-m', strtotime("-$i months"));
+                        $monthName = date('F Y', strtotime($month . '-01'));
+                        $selected = ($month === $selectedPeriod) ? 'selected' : '';
+                        echo "<option value='$month' $selected>$monthName</option>";
+                    }
+                    ?>
+                </select>
+                <button onclick="refreshData()" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                    <i data-feather="refresh-cw" style="width: 16px; height: 16px;"></i>
+                    Refresh
+                </button>
+            </div>
         </div>
         
         <!-- Key Statistics -->
         <div class="grid-2">
-            <!-- Capital Injected -->
-            <div class="card stat-card card-inject">
-                <div class="stat-label">
-                    <i data-feather="arrow-down-circle" style="width: 16px; height: 16px;"></i>
-                    Modal Diterima
+            <!-- Total Uang Masuk dari Owner (NEW) -->
+            <div class="card stat-card" style="border-left: 4px solid #10b981; background: linear-gradient(135deg, rgba(16,185,129,0.05) 0%, rgba(16,185,129,0.02) 100%);">
+                <div class="stat-label" style="color: #10b981;">
+                    <i data-feather="trending-up" style="width: 16px; height: 16px;"></i>
+                    Total Uang Masuk dari Owner
                 </div>
-                <div class="stat-value">Rp <?php echo number_format($totalCapitalInjected, 0, ',', '.'); ?></div>
+                <div class="stat-value" style="color: #10b981;">Rp <?php echo number_format($totalCapitalInjected, 0, ',', '.'); ?></div>
                 <div class="stat-change positive">
-                    ✓ Bulan ini
+                    💰 Setoran modal periode ini
                 </div>
             </div>
             
@@ -358,11 +369,11 @@ $remainingCapital = $currentBalance;
             <div class="card stat-card card-use">
                 <div class="stat-label">
                     <i data-feather="arrow-up-circle" style="width: 16px; height: 16px;"></i>
-                    Modal Digunakan
+                    Modal Digunakan Operasional
                 </div>
                 <div class="stat-value">Rp <?php echo number_format($totalCapitalUsed, 0, ',', '.'); ?></div>
                 <div class="stat-change negative">
-                    ✗ Pengeluaran operasional
+                    📤 Pengeluaran dari kas modal
                 </div>
             </div>
             
@@ -370,11 +381,11 @@ $remainingCapital = $currentBalance;
             <div class="card stat-card card-balance">
                 <div class="stat-label">
                     <i data-feather="credit-card" style="width: 16px; height: 16px;"></i>
-                    Saldo Kas Modal
+                    Saldo Kas Modal Saat Ini
                 </div>
                 <div class="stat-value">Rp <?php echo number_format($remainingCapital, 0, ',', '.'); ?></div>
                 <div class="stat-change neutral">
-                    📊 Saldo aktual
+                    💳 Saldo aktual real-time
                 </div>
             </div>
             
@@ -404,57 +415,116 @@ $remainingCapital = $currentBalance;
         <div class="card card-full">
             <div class="section-title">
                 <i data-feather="history" style="width: 20px; height: 20px; color: #3b82f6;"></i>
-                Riwayat Transaksi Modal - Bulan <?php echo strftime('%B %Y', strtotime($currentMonth)); ?>
+                Riwayat Transaksi Kas Modal Owner - <?php echo date('F Y', strtotime($currentMonth)); ?>
             </div>
             
-            <?php if (!empty($capitalInjections) || !empty($capitalExpenses)): ?>
+            <?php if (!empty($allTransactions)): ?>
+                <div style="margin-bottom: 1rem; padding: 1rem; background: #f8fafc; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <small style="color: #64748b; font-weight: 600;">Total Transaksi</small>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: #1e293b;"><?php echo count($allTransactions); ?> transaksi</div>
+                    </div>
+                    <div>
+                        <small style="color: #10b981; font-weight: 600;">Uang Masuk</small>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: #10b981;">Rp <?php echo number_format($totalCapitalInjected, 0, ',', '.'); ?></div>
+                    </div>
+                    <div>
+                        <small style="color: #ef4444; font-weight: 600;">Uang Keluar</small>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: #ef4444;">Rp <?php echo number_format($totalCapitalUsed, 0, ',', '.'); ?></div>
+                    </div>
+                    <div>
+                        <small style="color: #3b82f6; font-weight: 600;">Selisih</small>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: <?php echo ($totalCapitalInjected - $totalCapitalUsed) >= 0 ? '#10b981' : '#ef4444'; ?>;">
+                            Rp <?php echo number_format($totalCapitalInjected - $totalCapitalUsed, 0, ',', '.'); ?>
+                        </div>
+                    </div>
+                </div>
+                
                 <table class="transaction-table">
                     <thead>
                         <tr>
                             <th>Tanggal</th>
                             <th>Deskripsi</th>
+                            <th>Kategori/Divisi</th>
                             <th>Tipe</th>
-                            <th>Jumlah</th>
+                            <th>Uang Masuk</th>
+                            <th>Uang Keluar</th>
+                            <th>Saldo</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php 
-                        // Merge and sort all transactions
-                        $allTransactions = array_merge($capitalInjections, $capitalExpenses);
-                        usort($allTransactions, function($a, $b) {
-                            return strtotime($b['transaction_date']) - strtotime($a['transaction_date']);
-                        });
+                        // Calculate running balance from oldest to newest first
+                        $balances = [];
+                        $runningBalance = 0;
                         
+                        // Reverse to calculate from oldest
+                        $reversedTxns = array_reverse($allTransactions);
+                        foreach ($reversedTxns as $txn) {
+                            $runningBalance += ($txn['debit'] - $txn['credit']);
+                            $balances[$txn['id']] = $runningBalance;
+                        }
+                        
+                        // Now display in original order (newest first)
                         foreach ($allTransactions as $txn): 
+                            // Get description
+                            $description = $txn['description'] ?: ($txn['cash_book_desc'] ?: '-');
                         ?>
                             <tr>
-                                <td><?php echo date('d M Y', strtotime($txn['transaction_date'])); ?></td>
-                                <td><?php echo htmlspecialchars($txn['description']); ?></td>
+                                <td style="white-space: nowrap;"><?php echo date('d M Y', strtotime($txn['transaction_date'])); ?></td>
+                                <td><?php echo htmlspecialchars($description); ?></td>
+                                <td style="font-size: 0.813rem; color: #64748b;">
+                                    <?php 
+                                    if ($txn['category']) {
+                                        echo '<span style="background: #e0e7ff; color: #4338ca; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">' . htmlspecialchars($txn['category']) . '</span>';
+                                    }
+                                    if ($txn['division_id']) {
+                                        echo '<br><small>Divisi: ' . $txn['division_id'] . '</small>';
+                                    }
+                                    ?>
+                                </td>
                                 <td>
                                     <?php
-                                    switch ($txn['transaction_type']) {
-                                        case 'capital_injection':
-                                            echo '<span class="badge badge-injection">Setoran Modal</span>';
-                                            break;
-                                        case 'expense':
-                                            echo '<span class="badge badge-expense">Pengeluaran</span>';
-                                            break;
-                                        case 'transfer':
-                                            echo '<span class="badge badge-transfer">Transfer</span>';
-                                            break;
-                                        default:
-                                            echo '<span class="badge">' . ucfirst($txn['transaction_type']) . '</span>';
+                                    $badgeClass = 'badge';
+                                    $badgeText = ucfirst($txn['transaction_type']);
+                                    
+                                    if ($txn['transaction_type'] == 'capital_injection' || $txn['debit'] > 0) {
+                                        $badgeClass = 'badge badge-injection';
+                                        $badgeText = 'Setoran Modal';
+                                    } elseif ($txn['transaction_type'] == 'expense') {
+                                        $badgeClass = 'badge badge-expense';
+                                        $badgeText = 'Pengeluaran';
+                                    } elseif ($txn['transaction_type'] == 'transfer') {
+                                        $badgeClass = 'badge badge-transfer';
+                                        $badgeText = 'Transfer';
+                                    } elseif ($txn['transaction_type'] == 'income') {
+                                        $badgeClass = 'badge badge-injection';
+                                        $badgeText = 'Pemasukan';
                                     }
+                                    
+                                    echo '<span class="' . $badgeClass . '">' . $badgeText . '</span>';
                                     ?>
                                 </td>
                                 <td style="text-align: right; font-weight: 600;">
                                     <?php
                                     if ($txn['debit'] > 0) {
-                                        echo '<span style="color: #10b981;">+ Rp ' . number_format($txn['debit'], 0, ',', '.') . '</span>';
+                                        echo '<span style="color: #10b981;">Rp ' . number_format($txn['debit'], 0, ',', '.') . '</span>';
                                     } else {
-                                        echo '<span style="color: #ef4444;">- Rp ' . number_format($txn['credit'], 0, ',', '.') . '</span>';
+                                        echo '<span style="color: #cbd5e1;">-</span>';
                                     }
                                     ?>
+                                </td>
+                                <td style="text-align: right; font-weight: 600;">
+                                    <?php
+                                    if ($txn['credit'] > 0) {
+                                        echo '<span style="color: #ef4444;">Rp ' . number_format($txn['credit'], 0, ',', '.') . '</span>';
+                                    } else {
+                                        echo '<span style="color: #cbd5e1;">-</span>';
+                                    }
+                                    ?>
+                                </td>
+                                <td style="text-align: right; font-weight: 700; color: #1e293b;">
+                                    Rp <?php echo number_format($balances[$txn['id']], 0, ',', '.'); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -463,9 +533,10 @@ $remainingCapital = $currentBalance;
             <?php else: ?>
                 <div class="empty-state">
                     <i data-feather="inbox"></i>
-                    <p>Belum ada transaksi modal bulan ini</p>
+                    <p>Belum ada transaksi modal pada periode ini</p>
                 </div>
             <?php endif; ?>
+        </div>
         </div>
         
         <!-- Chart -->
@@ -485,6 +556,10 @@ $remainingCapital = $currentBalance;
         
         function refreshData() {
             location.reload();
+        }
+        
+        function changePeriod(period) {
+            window.location.href = '?period=' + period;
         }
         
         // Initialize chart
