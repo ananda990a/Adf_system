@@ -12,9 +12,34 @@ $auth->requireLogin();
 $db = Database::getInstance();
 $currentUser = $auth->getCurrentUser();
 
-// Get Total Real Cash (All Time)
+// ============================================
+// EXCLUDE OWNER CAPITAL FROM OPERATIONAL STATS
+// ============================================
+$ownerCapitalAccountIds = [];
+try {
+    $masterDb = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
+    $masterDb->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    
+    $businessIdentifier = ACTIVE_BUSINESS_ID;
+    $businessMapping = ['narayana-hotel' => 1, 'bens-cafe' => 2];
+    $businessId = $businessMapping[$businessIdentifier] ?? 1;
+    
+    $stmt = $masterDb->prepare("SELECT id FROM cash_accounts WHERE business_id = ? AND account_type = 'owner_capital'");
+    $stmt->execute([$businessId]);
+    $ownerCapitalAccountIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (Exception $e) {
+    error_log("Error fetching owner capital accounts: " . $e->getMessage());
+}
+
+// Build exclusion clause
+$excludeOwnerCapital = '';
+if (!empty($ownerCapitalAccountIds)) {
+    $excludeOwnerCapital = " AND (cash_account_id IS NULL OR cash_account_id NOT IN (" . implode(',', $ownerCapitalAccountIds) . "))";
+}
+
+// Get Total Real Cash (All Time) - Exclude Owner Capital
 $allTimeCashResult = $db->fetchOne(
-    "SELECT SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE -amount END) as balance FROM cash_book"
+    "SELECT SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE -amount END) as balance FROM cash_book WHERE 1=1" . $excludeOwnerCapital
 );
 $totalRealCash = $allTimeCashResult['balance'] ?? 0;
 
@@ -42,9 +67,12 @@ if ($division_id > 0) {
 
 $whereClause = implode(' AND ', $whereConditions);
 
-// Get Opening Balance (All transactions before start_date)
+// Add owner capital exclusion to operational income queries
+$whereClauseWithExclusion = $whereClause . str_replace('cash_account_id', 'cb.cash_account_id', $excludeOwnerCapital);
+
+// Get Opening Balance (All transactions before start_date) - Exclude Owner Capital
 $openingParams = ['start_date' => $start_date];
-$openingWhere = "transaction_date < :start_date";
+$openingWhere = "transaction_date < :start_date" . $excludeOwnerCapital;
 if ($division_id > 0) {
     $openingWhere .= " AND division_id = :division_id";
     $openingParams['division_id'] = $division_id;
@@ -59,13 +87,19 @@ $openingBalanceResult = $db->fetchOne("
 $openingBalance = $openingBalanceResult['balance'] ?? 0;
 $runningBalance = $openingBalance;
 
-// Get daily summary
+// Build exclusion condition for CASE statement
+$ownerCapitalExcludeCondition = '';
+if (!empty($ownerCapitalAccountIds)) {
+    $ownerCapitalExcludeCondition = " AND (cb.cash_account_id IS NULL OR cb.cash_account_id NOT IN (" . implode(',', $ownerCapitalAccountIds) . "))";
+}
+
+// Get daily summary - Exclude owner capital from income
 $dailySummary = $db->fetchAll("
     SELECT 
         DATE(cb.transaction_date) as date,
-        COALESCE(SUM(CASE WHEN cb.transaction_type = 'income' THEN cb.amount ELSE 0 END), 0) as total_income,
+        COALESCE(SUM(CASE WHEN cb.transaction_type = 'income'{$ownerCapitalExcludeCondition} THEN cb.amount ELSE 0 END), 0) as total_income,
         COALESCE(SUM(CASE WHEN cb.transaction_type = 'expense' THEN cb.amount ELSE 0 END), 0) as total_expense,
-        COALESCE(SUM(CASE WHEN cb.transaction_type = 'income' THEN cb.amount ELSE 0 END), 0) - 
+        COALESCE(SUM(CASE WHEN cb.transaction_type = 'income'{$ownerCapitalExcludeCondition} THEN cb.amount ELSE 0 END), 0) - 
         COALESCE(SUM(CASE WHEN cb.transaction_type = 'expense' THEN cb.amount ELSE 0 END), 0) as net_balance,
         COUNT(*) as transaction_count
     FROM cash_book cb
@@ -102,7 +136,7 @@ $dailySummaryDisplay = array_reverse($dailySummary); // Newest first
 // GET DETAIL TRANSACTIONS FOR PRINT
 // ============================================
 
-// Get income details from cash book
+// Get income details from cash book - Exclude Owner Capital
 $incomeDetails = $db->fetchAll("
     SELECT 
         cb.id,
@@ -115,7 +149,7 @@ $incomeDetails = $db->fetchAll("
     FROM cash_book cb
     LEFT JOIN divisions d ON cb.division_id = d.id
     LEFT JOIN categories c ON cb.category_id = c.id
-    WHERE $whereClause AND cb.transaction_type = 'income'
+    WHERE $whereClauseWithExclusion AND cb.transaction_type = 'income'
     ORDER BY cb.transaction_date, cb.transaction_time
 ", $params);
 
