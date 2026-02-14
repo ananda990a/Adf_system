@@ -11,7 +11,19 @@ require_once '../../includes/auth.php';
 $auth = new Auth();
 $auth->requireLogin();
 
+// Get business DB instance (for cash_book queries if needed)
 $db = Database::getInstance();
+
+// Get MASTER DB instance (for cash_accounts and cash_account_transactions)
+$masterDb = new PDO(
+    "mysql:host=" . DB_HOST . ";dbname=" . MASTER_DB_NAME . ";charset=utf8mb4",
+    DB_USER,
+    DB_PASS,
+    [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+    ]
+);
 
 // Check authorization
 $userRole = $_SESSION['role'] ?? '';
@@ -35,11 +47,12 @@ $selectedPeriod = $_GET['period'] ?? date('Y-m');
 $currentMonth = date('Y-m-01', strtotime($selectedPeriod . '-01'));
 $nextMonth = date('Y-m-t', strtotime($currentMonth));
 
-// Get Kas Modal Owner account
-$ownerCapitalAccount = $db->fetchOne(
-    "SELECT * FROM cash_accounts WHERE business_id = ? AND account_type = 'owner_capital' AND is_active = 1",
-    [$businessId]
+// Get Kas Modal Owner account from MASTER DB
+$stmt = $masterDb->prepare(
+    "SELECT * FROM cash_accounts WHERE business_id = ? AND account_type = 'owner_capital' AND is_active = 1"
 );
+$stmt->execute([$businessId]);
+$ownerCapitalAccount = $stmt->fetch();
 
 if (!$ownerCapitalAccount) {
     die('❌ Kas Modal Owner account not found. Please run accounting setup first.');
@@ -62,7 +75,8 @@ if (IS_PRODUCTION) {
 }
 
 // Get ALL transactions for this account in selected period with cross-DB join
-$allTransactions = $db->fetchAll(
+// Query from MASTER DB because cash_account_transactions is in master DB
+$stmt = $masterDb->prepare(
     "SELECT cat.*, 
             cb.description as cash_book_desc,
             cb.category,
@@ -71,22 +85,23 @@ $allTransactions = $db->fetchAll(
      LEFT JOIN {$businessDbName}.cash_book cb ON cat.transaction_id = cb.id AND cat.transaction_type IN ('income', 'expense')
      WHERE cat.cash_account_id = ?
      AND cat.transaction_date >= ? AND cat.transaction_date <= ?
-     ORDER BY cat.transaction_date DESC, cat.id DESC",
-    [$ownerCapitalAccount['id'], $currentMonth, $nextMonth]
+     ORDER BY cat.transaction_date DESC, cat.id DESC"
 );
+$stmt->execute([$ownerCapitalAccount['id'], $currentMonth, $nextMonth]);
+$allTransactions = $stmt->fetchAll();
 
 // Calculate totals
-$totalCapitalInjected = 0;  // Total setoran dari owner (DEBIT - uang masuk)
-$totalCapitalUsed = 0;      // Total digunakan untuk operasional (CREDIT - uang keluar)
+$totalCapitalInjected = 0;  // Total setoran dari owner (income/capital_injection)
+$totalCapitalUsed = 0;      // Total digunakan untuk operasional (expense)
 
 foreach ($allTransactions as $txn) {
-    // DEBIT = Uang masuk ke Kas Modal Owner (setoran dari owner)
-    if ($txn['debit'] > 0) {
-        $totalCapitalInjected += $txn['debit'];
+    // Income or capital_injection = Uang masuk ke Kas Modal Owner
+    if (in_array($txn['transaction_type'], ['income', 'capital_injection'])) {
+        $totalCapitalInjected += $txn['amount'];
     }
-    // CREDIT = Uang keluar dari Kas Modal Owner (digunakan operasional)
-    if ($txn['credit'] > 0) {
-        $totalCapitalUsed += $txn['credit'];
+    // Expense = Uang keluar dari Kas Modal Owner
+    if ($txn['transaction_type'] == 'expense') {
+        $totalCapitalUsed += $txn['amount'];
     }
 }
 
@@ -481,7 +496,12 @@ $remainingCapital = $currentBalance;
                         // Reverse to calculate from oldest
                         $reversedTxns = array_reverse($allTransactions);
                         foreach ($reversedTxns as $txn) {
-                            $runningBalance += ($txn['debit'] - $txn['credit']);
+                            // Income/capital_injection adds, expense subtracts
+                            if (in_array($txn['transaction_type'], ['income', 'capital_injection'])) {
+                                $runningBalance += $txn['amount'];
+                            } else if ($txn['transaction_type'] == 'expense') {
+                                $runningBalance -= $txn['amount'];
+                            }
                             $balances[$txn['id']] = $runningBalance;
                         }
                         
@@ -508,18 +528,15 @@ $remainingCapital = $currentBalance;
                                     $badgeClass = 'badge';
                                     $badgeText = ucfirst($txn['transaction_type']);
                                     
-                                    if ($txn['transaction_type'] == 'capital_injection' || $txn['debit'] > 0) {
+                                    if (in_array($txn['transaction_type'], ['capital_injection', 'income'])) {
                                         $badgeClass = 'badge badge-injection';
-                                        $badgeText = 'Setoran Modal';
+                                        $badgeText = ($txn['transaction_type'] == 'capital_injection') ? 'Setoran Modal' : 'Pemasukan';
                                     } elseif ($txn['transaction_type'] == 'expense') {
                                         $badgeClass = 'badge badge-expense';
                                         $badgeText = 'Pengeluaran';
                                     } elseif ($txn['transaction_type'] == 'transfer') {
                                         $badgeClass = 'badge badge-transfer';
                                         $badgeText = 'Transfer';
-                                    } elseif ($txn['transaction_type'] == 'income') {
-                                        $badgeClass = 'badge badge-injection';
-                                        $badgeText = 'Pemasukan';
                                     }
                                     
                                     echo '<span class="' . $badgeClass . '">' . $badgeText . '</span>';
@@ -527,8 +544,8 @@ $remainingCapital = $currentBalance;
                                 </td>
                                 <td style="text-align: right; font-weight: 600;">
                                     <?php
-                                    if ($txn['debit'] > 0) {
-                                        echo '<span style="color: #10b981;">Rp ' . number_format($txn['debit'], 0, ',', '.') . '</span>';
+                                    if (in_array($txn['transaction_type'], ['income', 'capital_injection'])) {
+                                        echo '<span style="color: #10b981;">Rp ' . number_format($txn['amount'], 0, ',', '.') . '</span>';
                                     } else {
                                         echo '<span style="color: #cbd5e1;">-</span>';
                                     }
@@ -536,8 +553,8 @@ $remainingCapital = $currentBalance;
                                 </td>
                                 <td style="text-align: right; font-weight: 600;">
                                     <?php
-                                    if ($txn['credit'] > 0) {
-                                        echo '<span style="color: #ef4444;">Rp ' . number_format($txn['credit'], 0, ',', '.') . '</span>';
+                                    if ($txn['transaction_type'] == 'expense') {
+                                        echo '<span style="color: #ef4444;">Rp ' . number_format($txn['amount'], 0, ',', '.') . '</span>';
                                     } else {
                                         echo '<span style="color: #cbd5e1;">-</span>';
                                     }
