@@ -161,10 +161,10 @@ try {
     $businessMapping = ['narayana-hotel' => 1, 'bens-cafe' => 2];
     $businessId = $businessMapping[$businessIdentifier] ?? 1;
     
-    // Get capital account ID
-    $stmt = $masterDb->prepare("SELECT id FROM cash_accounts WHERE business_id = ? AND account_type = 'owner_capital' AND is_default_account = 1 LIMIT 1");
+    // Get ALL owner_capital account IDs (not just default)
+    $stmt = $masterDb->prepare("SELECT id FROM cash_accounts WHERE business_id = ? AND account_type = 'owner_capital'");
     $stmt->execute([$businessId]);
-    $capitalAccount = $stmt->fetch(PDO::FETCH_ASSOC);
+    $capitalAccounts = $stmt->fetchAll(PDO::FETCH_COLUMN);
     
     $capitalStats = [
         'received' => 0,
@@ -172,22 +172,23 @@ try {
         'balance' => 0
     ];
     
-    if ($capitalAccount) {
-        $accountId = $capitalAccount['id'];
+    if (!empty($capitalAccounts)) {
+        // Query from BUSINESS database cash_book table (not cash_account_transactions)
+        $placeholders = implode(',', array_fill(0, count($capitalAccounts), '?'));
         
-        // Get this month's stats
-        $stmt = $masterDb->prepare("
+        $query = "
             SELECT 
-                SUM(CASE WHEN transaction_type IN ('capital_injection', 'income') THEN amount ELSE 0 END) as received,
+                SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END) as received,
                 SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END) as used,
-                (SUM(CASE WHEN transaction_type IN ('capital_injection', 'income') THEN amount ELSE 0 END) - 
+                (SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END) - 
                  SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END)) as balance
-            FROM cash_account_transactions 
-            WHERE cash_account_id = ? 
+            FROM cash_book 
+            WHERE cash_account_id IN ($placeholders)
             AND DATE_FORMAT(transaction_date, '%Y-%m') = ?
-        ");
-        $stmt->execute([$accountId, $thisMonth]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        ";
+        
+        $params = array_merge($capitalAccounts, [$thisMonth]);
+        $result = $db->fetchOne($query, $params);
         
         $capitalStats['received'] = $result['received'] ?? 0;
         $capitalStats['used'] = $result['used'] ?? 0;
