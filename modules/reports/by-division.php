@@ -9,6 +9,53 @@ $auth->requireLogin();
 
 $db = Database::getInstance();
 $currentUser = $auth->getCurrentUser();
+
+// ============================================
+// EXCLUDE OWNER CAPITAL FROM OPERATIONAL STATS
+// ============================================
+$ownerCapitalAccountIds = [];
+try {
+    $masterDb = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
+    $masterDb->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    
+    $businessIdentifier = ACTIVE_BUSINESS_ID;
+    $businessMapping = ['narayana-hotel' => 1, 'bens-cafe' => 2];
+    $businessId = $businessMapping[$businessIdentifier] ?? 1;
+    
+    $stmt = $masterDb->prepare("SELECT id FROM cash_accounts WHERE business_id = ? AND account_type = 'owner_capital'");
+    $stmt->execute([$businessId]);
+    $ownerCapitalAccountIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (Exception $e) {
+    error_log("Error fetching owner capital accounts: " . $e->getMessage());
+}
+
+// Build exclusion clause
+$excludeOwnerCapital = '';
+$ownerCapitalExcludeCondition = '';
+if (!empty($ownerCapitalAccountIds)) {
+    $excludeOwnerCapital = " AND (cash_account_id IS NULL OR cash_account_id NOT IN (" . implode(',', $ownerCapitalAccountIds) . "))";
+    $ownerCapitalExcludeCondition = " AND (cb.cash_account_id IS NULL OR cb.cash_account_id NOT IN (" . implode(',', $ownerCapitalAccountIds) . "))";
+}
+
+// Get Cash Account Balances from Master DB
+$pettyCashBalance = 0;
+$ownerCapitalBalance = 0;
+try {
+    // Get Petty Cash balance (Kas Besar - account_type = 'cash')
+    $stmt = $masterDb->prepare("SELECT current_balance FROM cash_accounts WHERE business_id = ? AND account_type = 'cash' AND is_default_account = 1");
+    $stmt->execute([$businessId]);
+    $pettyCashResult = $stmt->fetch(PDO::FETCH_ASSOC);
+    $pettyCashBalance = $pettyCashResult['current_balance'] ?? 0;
+    
+    // Get Owner Capital balance
+    $stmt = $masterDb->prepare("SELECT current_balance FROM cash_accounts WHERE business_id = ? AND account_type = 'owner_capital'");
+    $stmt->execute([$businessId]);
+    $ownerCapitalResult = $stmt->fetch(PDO::FETCH_ASSOC);
+    $ownerCapitalBalance = $ownerCapitalResult['current_balance'] ?? 0;
+} catch (Exception $e) {
+    error_log("Error fetching cash account balances: " . $e->getMessage());
+}
+
 $pageTitle = 'Laporan Per Divisi';
 
 // Get filter parameters
@@ -26,9 +73,9 @@ $divisionSummary = $db->fetchAll("
     SELECT 
         d.id,
         d.division_name,
-        COALESCE(SUM(CASE WHEN cb.transaction_type = 'income' THEN cb.amount ELSE 0 END), 0) as total_income,
+        COALESCE(SUM(CASE WHEN cb.transaction_type = 'income'{$ownerCapitalExcludeCondition} THEN cb.amount ELSE 0 END), 0) as total_income,
         COALESCE(SUM(CASE WHEN cb.transaction_type = 'expense' THEN cb.amount ELSE 0 END), 0) as total_expense,
-        COALESCE(SUM(CASE WHEN cb.transaction_type = 'income' THEN cb.amount ELSE 0 END), 0) - 
+        COALESCE(SUM(CASE WHEN cb.transaction_type = 'income'{$ownerCapitalExcludeCondition} THEN cb.amount ELSE 0 END), 0) - 
         COALESCE(SUM(CASE WHEN cb.transaction_type = 'expense' THEN cb.amount ELSE 0 END), 0) as net_balance,
         COUNT(cb.id) as transaction_count
     FROM divisions d
@@ -211,6 +258,36 @@ if ($displayLogo) {
                 <div style="font-size: 0.813rem; color: var(--text-muted); margin-bottom: 0.25rem;">Total Divisi</div>
                 <div style="font-size: 1.375rem; font-weight: 700; color: var(--text-primary);">
                     <?php echo count($divisionSummary); ?>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Saldo Petty Cash (Kas Besar) -->
+    <div class="card" style="padding: 1.25rem; background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(6, 182, 212, 0.05));">
+        <div style="display: flex; align-items: center; gap: 0.875rem;">
+            <div style="width: 48px; height: 48px; border-radius: var(--radius-lg); background: #06b6d4; display: flex; align-items: center; justify-content: center;">
+                <i data-feather="dollar-sign" style="width: 24px; height: 24px; color: white;"></i>
+            </div>
+            <div style="flex: 1;">
+                <div style="font-size: 0.813rem; color: #0891b2; margin-bottom: 0.25rem;">💵 Petty Cash</div>
+                <div style="font-size: 1.375rem; font-weight: 700; color: #0891b2;">
+                    Rp <?php echo number_format($pettyCashBalance, 0, ',', '.'); ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Saldo Modal Owner -->
+    <div class="card" style="padding: 1.25rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));">
+        <div style="display: flex; align-items: center; gap: 0.875rem;">
+            <div style="width: 48px; height: 48px; border-radius: var(--radius-lg); background: #10b981; display: flex; align-items: center; justify-content: center;">
+                <i data-feather="trending-up" style="width: 24px; height: 24px; color: white;"></i>
+            </div>
+            <div style="flex: 1;">
+                <div style="font-size: 0.813rem; color: #059669; margin-bottom: 0.25rem;">🔥 Modal Owner</div>
+                <div style="font-size: 1.375rem; font-weight: 700; color: #059669;">
+                    Rp <?php echo number_format($ownerCapitalBalance, 0, ',', '.'); ?>
                 </div>
             </div>
         </div>
