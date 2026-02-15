@@ -375,16 +375,53 @@ $execute = isset($_GET['execute']) && $_GET['execute'] === 'yes';
                     // ===========================================
                     echo '<p class="info-log">📦 Step 5: Updating business databases...</p>';
                     
+                    // First, get all actual databases from server
+                    $allDbs = $masterDb->query("SHOW DATABASES")->fetchAll(PDO::FETCH_COLUMN);
+                    $actualDatabases = array_filter($allDbs, function($db) {
+                        return stripos($db, 'narayana') !== false || 
+                               stripos($db, 'bens') !== false || 
+                               stripos($db, 'cafe') !== false ||
+                               stripos($db, 'hotel') !== false;
+                    });
+                    
+                    echo '<p class="info-log">   Detected databases: ' . implode(', ', $actualDatabases) . '</p>';
+                    
                     foreach ($businesses as $biz) {
                         try {
-                            echo '<p class="info-log">   Processing: ' . $biz['business_name'] . ' (' . $biz['database_name'] . ')</p>';
+                            // Auto-detect correct database name
+                            $dbName = $biz['database_name'];
+                            
+                            // Check if database exists as-is
+                            $stmt = $masterDb->query("SHOW DATABASES LIKE '" . $dbName . "'");
+                            $exists = $stmt->fetch();
+                            
+                            if (!$exists) {
+                                // Try with hosting prefix (adfb2574_)
+                                $identifier = $biz['business_identifier'] ?? str_replace('adf_', '', $dbName);
+                                foreach ($actualDatabases as $actualDb) {
+                                    if (stripos($actualDb, $identifier) !== false || 
+                                        stripos($actualDb, str_replace('-', '_', $identifier)) !== false) {
+                                        $dbName = $actualDb;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            echo '<p class="info-log">   Processing: ' . $biz['business_name'] . ' → <code>' . $dbName . '</code></p>';
                             
                             $bizDb = new PDO(
-                                "mysql:host=" . DB_HOST . ";dbname={$biz['database_name']};charset=utf8mb4",
+                                "mysql:host=" . DB_HOST . ";dbname={$dbName};charset=utf8mb4",
                                 DB_USER,
                                 DB_PASS,
                                 [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
                             );
+                            
+                            // Check if cash_book table exists
+                            $tables = $bizDb->query("SHOW TABLES LIKE 'cash_book'")->fetchAll();
+                            if (empty($tables)) {
+                                echo '<p class="warning-log">      ⚠️  Table cash_book not found, skipping...</p>';
+                                continue;
+                            }
                             
                             // Check and add cash_account_id column
                             $cols = $bizDb->query("SHOW COLUMNS FROM cash_book LIKE 'cash_account_id'")->fetchAll();
